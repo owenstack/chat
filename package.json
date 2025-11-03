@@ -13,6 +13,7 @@
 		"format": "biome check --write"
 	},
 	"dependencies": {
+		"@clerk/tanstack-react-start": "^0.26.5",
 		"@cloudflare/vite-plugin": "^1.13.8",
 		"@convex-dev/react-query": "^0.0.0-alpha.11",
 		"@radix-ui/react-avatar": "^1.1.10",

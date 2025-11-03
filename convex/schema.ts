@@ -12,7 +12,8 @@ export default defineSchema({
 
 	// Defines a chat room
 	rooms: defineTable({
-		name: v.optional(v.string()),
+		name: v.string(),
+		memberIds: v.array(v.id("users")),
 	}),
 
 	// Stores the original, untranslated messages
