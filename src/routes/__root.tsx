@@ -1,5 +1,4 @@
-import { ClerkProvider, useAuth } from "@clerk/tanstack-react-start";
-import { auth } from "@clerk/tanstack-react-start/server";
+import { Auth0Provider } from "@auth0/auth0-react";
 import type { ConvexQueryClient } from "@convex-dev/react-query";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
@@ -11,41 +10,22 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { createServerFn } from "@tanstack/react-start";
 import type { ConvexReactClient } from "convex/react";
-import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { ConvexProviderWithAuth0 } from "convex/react-auth0";
+import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { NotFound } from "@/components/not-found";
-import { Header } from "../components/header";
+import { ThemeProvider } from "@/components/theme";
+import { env } from "@/env";
+import { getThemeServerFn } from "@/lib/theme";
 import appCss from "../styles.css?url";
-
-const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
-	const { userId, getToken } = await auth();
-	const token = await getToken({ template: "convex" });
-
-	return {
-		userId,
-		token,
-	};
-});
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient;
 	convexClient: ConvexReactClient;
 	convexQueryClient: ConvexQueryClient;
 }>()({
-	beforeLoad: async (ctx) => {
-		const { userId, token } = await fetchClerkAuth();
-
-		if (token) {
-			ctx.context.convexQueryClient.serverHttpClient?.setAuth(token);
-		}
-
-		return {
-			userId,
-			token,
-		};
-	},
+	loader: () => getThemeServerFn(),
 	head: () => ({
 		meta: [
 			{
@@ -67,7 +47,7 @@ export const Route = createRootRouteWithContext<{
 		],
 	}),
 
-	shellComponent: RootComponent,
+	component: RootComponent,
 	errorComponent: (props) => {
 		return (
 			<RootDocument>
@@ -80,25 +60,38 @@ export const Route = createRootRouteWithContext<{
 
 function RootComponent() {
 	const context = Route.useRouteContext();
+	const theme = Route.useLoaderData();
 	return (
-		<ClerkProvider>
-			<ConvexProviderWithClerk client={context.convexClient} useAuth={useAuth}>
-				<RootDocument>
-					<Outlet />
-				</RootDocument>
-			</ConvexProviderWithClerk>
-		</ClerkProvider>
+		<Auth0Provider
+			domain={env.VITE_AUTH0_DOMAIN}
+			clientId={env.VITE_AUTH0_CLIENT_ID}
+			authorizationParams={{
+				redirect_uri:
+					typeof window !== "undefined" ? window.location.origin : undefined,
+			}}
+			useRefreshTokens={true}
+			cacheLocation="localstorage"
+		>
+			<ConvexProviderWithAuth0 client={context.convexClient}>
+				<ThemeProvider theme={theme}>
+					<RootDocument>
+						<Outlet />
+						<Toaster richColors />
+					</RootDocument>
+				</ThemeProvider>
+			</ConvexProviderWithAuth0>
+		</Auth0Provider>
 	);
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+	const theme = Route.useLoaderData();
 	return (
-		<html lang="en">
+		<html lang="en" className={theme} suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>
 			<body>
-				<Header />
 				{children}
 				<TanStackDevtools
 					config={{
