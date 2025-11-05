@@ -1,20 +1,20 @@
-import { Logo } from "./logo";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { useConvexAuth } from "convex/react";
+import { LogOut, Moon, Sun } from "lucide-react";
+import { Logo } from "./logo";
 import { useTheme } from "./theme";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Button, buttonVariants } from "./ui/button";
 import {
 	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
-	DropdownMenuContent,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-	DropdownMenuGroup,
 } from "./ui/dropdown-menu";
-import { buttonVariants, Button } from "./ui/button";
-import { useConvexAuth } from "convex/react";
 import { Spinner } from "./ui/spinner";
-import { Moon, Sun, LogOut } from "lucide-react";
 
 export function Header() {
 	const { isAuthenticated, isLoading } = useConvexAuth();

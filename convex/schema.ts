@@ -8,6 +8,7 @@ export default defineSchema({
 		name: v.string(),
 		tokenIdentifier: v.string(), // For authentication
 		selectedLanguage: v.string(), // e.g., "en", "es", "ja"
+		rooms: v.array(v.id("rooms")), // Rooms the user is a member of
 	}).index("by_token", ["tokenIdentifier"]),
 
 	// Defines a chat room
