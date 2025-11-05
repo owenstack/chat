@@ -8,21 +8,38 @@ export default defineSchema({
 		name: v.string(),
 		tokenIdentifier: v.string(), // For authentication
 		selectedLanguage: v.string(), // e.g., "en", "es", "ja"
-		rooms: v.array(v.id("rooms")), // Rooms the user is a member of
-	}).index("by_token", ["tokenIdentifier"]),
+		// accountType: v.union(v.literal('public'), v.literal('private'))
+	})
+		.index("by_token", ["tokenIdentifier"])
+		.searchIndex("name_search", { searchField: "name" }),
 
 	// Defines a chat room
 	rooms: defineTable({
 		name: v.string(),
 		memberIds: v.array(v.id("users")),
-	}),
+		type: v.union(v.literal("private"), v.literal("group")),
+		createdBy: v.id("users"),
+		lastActivityAt: v.number(),
+	})
+		.index("by_member", ["memberIds"])
+		.index("by_last_activity", ["lastActivityAt"]),
 
 	// Stores the original, untranslated messages
 	messages: defineTable({
 		authorId: v.id("users"),
 		roomId: v.id("rooms"),
 		originalText: v.string(),
-	}).index("by_room", ["roomId"]),
+		sourceLanguage: v.string(),
+		createdAt: v.number(),
+		status: v.union(
+			v.literal("sending"),
+			v.literal("sent"),
+			v.literal("delivered"),
+			v.literal("failed"),
+		),
+	})
+		.index("by_room", ["roomId"])
+		.index("by_room_and_time", ["roomId", "createdAt"]),
 
 	// Our global, cost-saving cache for translations
 	translation_cache: defineTable({

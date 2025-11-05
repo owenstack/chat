@@ -17,6 +17,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { NotFound } from "@/components/not-found";
 import { ThemeProvider } from "@/components/theme";
 import { env } from "@/env";
+import { seo } from "@/lib/seo";
 import { getThemeServerFn } from "@/lib/theme";
 import appCss from "../styles.css?url";
 
@@ -35,9 +36,11 @@ export const Route = createRootRouteWithContext<{
 				name: "viewport",
 				content: "width=device-width, initial-scale=1",
 			},
-			{
-				title: "TanStack Start Starter",
-			},
+			...seo({
+				title:
+					"TanStack Start | Type-Safe, Client-First, Full-Stack React Framework",
+				description: `TanStack Start is a type-safe, client-first, full-stack React framework. `,
+			}),
 		],
 		links: [
 			{

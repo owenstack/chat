@@ -6,7 +6,6 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import {
 	Field,
-	FieldContent,
 	FieldDescription,
 	FieldError,
 	FieldLabel,
@@ -18,6 +17,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 
 export const Route = createFileRoute("/")({
 	component: RouteComponent,
@@ -82,17 +82,9 @@ function RouteComponent() {
 								field.state.meta.isTouched && !field.state.meta.isValid;
 							return (
 								<Field orientation={"responsive"} data-invalid={isInvalid}>
-									<FieldContent>
-										<FieldLabel htmlFor={field.name}>
-											Select your default language to continue
-										</FieldLabel>
-										<FieldDescription>
-											For best results, select the language you're fluent with
-										</FieldDescription>
-										{isInvalid && (
-											<FieldError errors={field.state.meta.errors} />
-										)}
-									</FieldContent>
+									<FieldLabel htmlFor={field.name}>
+										Select your default language to continue
+									</FieldLabel>
 									<Select
 										name={field.name}
 										value={field.state.value}
@@ -109,12 +101,20 @@ function RouteComponent() {
 											))}
 										</SelectContent>
 									</Select>
+									<FieldDescription>
+										For best results, select the language you're fluent with
+									</FieldDescription>
+									{isInvalid && <FieldError errors={field.state.meta.errors} />}
 								</Field>
 							);
 						}}
 					</form.Field>
-					<Button className="w-full" size="lg">
-						Start chatting
+					<Button
+						className="w-full"
+						size="lg"
+						disabled={form.state.isSubmitting}
+					>
+						{form.state.isSubmitting ? <Spinner /> : "Start chatting"}
 					</Button>
 				</form>
 			</div>

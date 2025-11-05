@@ -31,7 +31,6 @@ export const setUpUser = mutation({
 			name: identity.name ?? "Anonymous",
 			tokenIdentifier: identity.tokenIdentifier,
 			selectedLanguage: args.selectedLanguage,
-			rooms: [],
 		});
 	},
 });

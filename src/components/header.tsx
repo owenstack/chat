@@ -2,6 +2,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useConvexAuth } from "convex/react";
 import { LogOut, Moon, Sun } from "lucide-react";
 import { Logo } from "./logo";
+import { NewChat } from "./new";
 import { useTheme } from "./theme";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button, buttonVariants } from "./ui/button";
@@ -22,7 +23,8 @@ export function Header() {
 	return (
 		<header className="fixed top-0 flex items-center justify-between border border-b px-4 py-2 w-full z-10">
 			<Logo />
-			<div className="ml-auto">
+			<div className="flex gap-2 ml-auto">
+				<NewChat />
 				{isLoading ? (
 					<Spinner />
 				) : isAuthenticated ? (
@@ -68,6 +70,13 @@ function UserButton() {
 						Light
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
+				{/* <DropdownMenuSeparator />
+				<DropdownMenuItem
+					onClick={() => navigate('/settings')}
+				>
+					<Cog />
+					Account Settings
+				</DropdownMenuItem> */}
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
 					onClick={() =>
