@@ -16,13 +16,18 @@ export default defineSchema({
 	// Defines a chat room
 	rooms: defineTable({
 		name: v.string(),
-		memberIds: v.array(v.id("users")),
 		type: v.union(v.literal("private"), v.literal("group")),
 		createdBy: v.id("users"),
 		lastActivityAt: v.number(),
+	}).index("by_last_activity", ["lastActivityAt"]),
+
+	user_rooms: defineTable({
+		userId: v.id("users"),
+		roomId: v.id("rooms"),
 	})
-		.index("by_member", ["memberIds"])
-		.index("by_last_activity", ["lastActivityAt"]),
+		.index("by_user", ["userId"])
+		.index("by_room", ["roomId"])
+		.index("by_user_room", ["userId", "roomId"]),
 
 	// Stores the original, untranslated messages
 	messages: defineTable({

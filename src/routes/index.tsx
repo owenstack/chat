@@ -113,6 +113,7 @@ function RouteComponent() {
 						className="w-full"
 						size="lg"
 						disabled={form.state.isSubmitting}
+						variant={"secondary"}
 					>
 						{form.state.isSubmitting ? <Spinner /> : "Start chatting"}
 					</Button>

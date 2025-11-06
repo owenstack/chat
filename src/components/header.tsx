@@ -23,7 +23,7 @@ export function Header() {
 	return (
 		<header className="fixed top-0 flex items-center justify-between border border-b px-4 py-2 w-full z-10">
 			<Logo />
-			<div className="flex gap-2 ml-auto">
+			<div className="flex items-center gap-2 ml-auto">
 				<NewChat />
 				{isLoading ? (
 					<Spinner />

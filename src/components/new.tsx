@@ -134,7 +134,9 @@ export function NewChat({ showMessage = false }) {
 }
 
 function NewChatContent() {
-	const [query, setQuery] = useDebounceValue("", 300, { leading: true });
+	const [query, setQuery] = useDebounceValue("", 300, {
+		leading: true,
+	});
 	const { isLoading, status, loadMore, results } = usePaginatedQuery(
 		api.chat.getPublicUsers,
 		{ query },
@@ -150,7 +152,7 @@ function NewChatContent() {
 	}
 
 	const form = useForm({
-		defaultValues: { memberIds: [""], name: "" },
+		defaultValues: { memberIds: [] as string[], name: "" },
 		validators: {
 			onSubmit: newChatSchema,
 		},
@@ -254,7 +256,7 @@ function NewChatContent() {
 									onValueChange={field.handleChange}
 									spacing={0}
 									orientation="vertical"
-									className="p-1"
+									className="p-1 w-full"
 									aria-invalid={isInvalid}
 								>
 									{results.map((user, index) => (

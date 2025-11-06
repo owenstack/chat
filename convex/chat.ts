@@ -11,28 +11,34 @@ export const getRooms = query({
 		if (!identity) {
 			throw new Error("Not authenticated");
 		}
-		const userId = await ctx.db
+		const user = await ctx.db
 			.query("users")
 			.withIndex("by_token", (q) =>
 				q.eq("tokenIdentifier", identity.tokenIdentifier),
 			)
-			.unique()
-			.then((user) => {
-				if (!user) {
-					throw new Error("User not found");
-				}
-				return user._id;
-			});
-		const results = await ctx.db
-			.query("rooms")
-			.withIndex("by_member", (q) => q.eq("memberIds", [userId]))
+			.unique();
+
+		if (!user) {
+			throw new Error("User not found");
+		}
+		const userId = user._id;
+
+		// Get all room memberships for the user
+		const userRooms = await ctx.db
+			.query("user_rooms")
+			.withIndex("by_user", (q) => q.eq("userId", userId))
 			.order("desc")
 			.paginate(args.paginationOpts);
-		const data = results.page.map(
-			({ memberIds, createdBy, _creationTime, ...rest }) => rest,
-		);
+
+		// Get the full room documents
+		const rooms = await Promise.all(
+			userRooms.page.map((userRoom) => ctx.db.get(userRoom.roomId)),
+		).then((rooms) => rooms.filter((room) => room !== null));
+
+		const data = rooms.map(({ _creationTime, createdBy, ...rest }) => rest);
+
 		return {
-			...results,
+			...userRooms,
 			page: data,
 		};
 	},
@@ -48,13 +54,18 @@ export const getPublicUsers = query({
 		if (!identity) {
 			throw new Error("Not authenticated");
 		}
-		const results = await ctx.db
-			.query("users")
-			.withSearchIndex("name_search", (q) => q.search("name", args.query ?? ""))
-			.paginate(args.paginationOpts);
-		const data = results.page.map(
-			({ tokenIdentifier, _creationTime, ...rest }) => rest,
-		);
+		const results = args.query
+			? await ctx.db
+					.query("users")
+					.withSearchIndex("name_search", (q) =>
+						q.search("name", args.query ?? ""),
+					)
+					.paginate(args.paginationOpts)
+			: await ctx.db.query("users").paginate(args.paginationOpts);
+
+		const data = results.page
+			.filter((user) => user.tokenIdentifier !== identity.tokenIdentifier)
+			.map(({ tokenIdentifier, _creationTime, ...rest }) => rest);
 		return {
 			...results,
 			page: data,
@@ -83,11 +94,22 @@ export const createRoom = mutation({
 		}
 		const roomId = await ctx.db.insert("rooms", {
 			name: args.name,
-			memberIds: args.memberIds,
 			type: args.memberIds.length > 2 ? "group" : "private",
 			createdBy: creator._id,
 			lastActivityAt: Date.now(),
 		});
+
+		const allMemberIds = [...args.memberIds, creator._id];
+
+		await Promise.all(
+			allMemberIds.map((userId) =>
+				ctx.db.insert("user_rooms", {
+					userId,
+					roomId,
+				}),
+			),
+		);
+
 		return roomId;
 	},
 });
