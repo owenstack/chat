@@ -1,5 +1,6 @@
-import { useConvexMutation } from "@convex-dev/react-query";
+import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
 import { useForm } from "@tanstack/react-form";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { usePaginatedQuery } from "convex/react";
 import {
@@ -26,6 +27,7 @@ import {
 import { getInitials } from "@/lib/helpers";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import {
 	Dialog,
@@ -73,26 +75,29 @@ export function NewChat({ showMessage = false }) {
 						variant="ghost"
 						size={showMessage ? "lg" : "icon"}
 						aria-label="New chat"
+						className={showMessage ? "gap-2 font-medium" : ""}
 					>
 						<SquarePen className="size-5" />
-						{showMessage && "Start new chat"}
+						{showMessage && <span>Start new chat</span>}
 					</Button>
 				</DialogTrigger>
 				<DialogContent className="sm:max-w-[550px]">
-					<DialogHeader className="space-y-3">
-						<DialogTitle className="text-2xl font-semibold">
+					<DialogHeader className="space-y-3 pb-2">
+						<DialogTitle className="text-2xl font-semibold tracking-tight">
 							New chat
 						</DialogTitle>
-						<DialogDescription className="text-base">
+						<DialogDescription className="text-base text-muted-foreground leading-relaxed">
 							Select users you want to chat with
 						</DialogDescription>
 					</DialogHeader>
-					<div className="py-4">
+					<div className="py-2">
 						<NewChatContent />
 					</div>
-					<DialogFooter className="gap-2">
+					<DialogFooter className="gap-2 pt-2">
 						<DialogClose asChild>
-							<Button variant="outline">Cancel</Button>
+							<Button variant="outline" className="font-medium">
+								Cancel
+							</Button>
 						</DialogClose>
 					</DialogFooter>
 				</DialogContent>
@@ -107,25 +112,32 @@ export function NewChat({ showMessage = false }) {
 					variant="ghost"
 					size={showMessage ? "lg" : "icon"}
 					aria-label="New chat"
+					className={showMessage ? "gap-2 font-medium" : ""}
 				>
 					<SquarePen className="size-5" />
-					{showMessage && "Start new chat"}
+					{showMessage && <span>Start new chat</span>}
 				</Button>
 			</DrawerTrigger>
 			<DrawerContent className="px-4">
-				<DrawerHeader className="space-y-2 text-left">
-					<DrawerTitle className="text-2xl font-semibold">New chat</DrawerTitle>
-					<DrawerDescription className="text-base">
+				<DrawerHeader className="space-y-2.5 text-left pb-2">
+					<DrawerTitle className="text-2xl font-semibold tracking-tight">
+						New chat
+					</DrawerTitle>
+					<DrawerDescription className="text-base text-muted-foreground leading-relaxed">
 						Select users you want to chat with
 					</DrawerDescription>
 				</DrawerHeader>
-				<div className="py-4">
+				<div className="py-2">
 					<NewChatContent />
 				</div>
 				<DrawerFooter className="gap-2 pt-4">
-					<Button type="submit">Create chat</Button>
+					<Button type="submit" className="font-medium">
+						Create chat
+					</Button>
 					<DrawerClose asChild>
-						<Button variant="outline">Cancel</Button>
+						<Button variant="outline" className="font-medium">
+							Cancel
+						</Button>
 					</DrawerClose>
 				</DrawerFooter>
 			</DrawerContent>
@@ -138,11 +150,11 @@ function NewChatContent() {
 		leading: true,
 	});
 	const { isLoading, status, loadMore, results } = usePaginatedQuery(
-		api.chat.getPublicUsers,
+		api.user.getPublicUsers,
 		{ query },
 		{ initialNumItems: 6 },
 	);
-	const mutationFn = useConvexMutation(api.chat.createRoom);
+	const mutationFn = useConvexMutation(api.room.createRoom);
 	const navigate = useNavigate();
 	const { ref, isIntersecting } = useIntersectionObserver({
 		threshold: 0.5,
@@ -185,7 +197,7 @@ function NewChatContent() {
 				e.preventDefault();
 				form.handleSubmit();
 			}}
-			className="w-full space-y-6"
+			className="w-full space-y-5"
 		>
 			<form.Field name="name">
 				{(field) => {
@@ -193,15 +205,18 @@ function NewChatContent() {
 						field.state.meta.isTouched && !field.state.meta.isValid;
 					return (
 						<Field orientation={"responsive"} data-invalid={isInvalid}>
-							<FieldLabel htmlFor={field.name} className="text-sm font-medium">
+							<FieldLabel
+								htmlFor={field.name}
+								className="text-sm font-semibold"
+							>
 								Chat name
 							</FieldLabel>
 							<InputGroup>
 								<InputGroupAddon align="inline-start">
 									{isGroup ? (
-										<UsersRound className="size-4" />
+										<UsersRound className="size-4 text-muted-foreground" />
 									) : (
-										<UserRound className="size-4" />
+										<UserRound className="size-4 text-muted-foreground" />
 									)}
 								</InputGroupAddon>
 								<InputGroupInput
@@ -216,7 +231,7 @@ function NewChatContent() {
 									required
 								/>
 							</InputGroup>
-							<FieldDescription className="text-xs">
+							<FieldDescription className="text-xs text-muted-foreground leading-relaxed">
 								Choose a memorable name for this conversation
 							</FieldDescription>
 							{isInvalid && <FieldError errors={field.state.meta.errors} />}
@@ -230,12 +245,15 @@ function NewChatContent() {
 						field.state.meta.isTouched && !field.state.meta.isValid;
 					return (
 						<Field orientation={"responsive"} data-invalid={isInvalid}>
-							<FieldLabel htmlFor={field.name} className="text-sm font-medium">
+							<FieldLabel
+								htmlFor={field.name}
+								className="text-sm font-semibold"
+							>
 								Participants
 							</FieldLabel>
 							<InputGroup>
 								<InputGroupAddon>
-									<Search className="size-4" />
+									<Search className="size-4 text-muted-foreground" />
 								</InputGroupAddon>
 								<InputGroupInput
 									placeholder="Search users..."
@@ -244,43 +262,35 @@ function NewChatContent() {
 									className="text-sm"
 								/>
 								<InputGroupAddon align="inline-end">
-									<span className="text-xs text-muted-foreground font-medium">
+									<span className="text-xs text-muted-foreground font-semibold tabular-nums">
 										{results.length}
 									</span>
 								</InputGroupAddon>
 							</InputGroup>
-							<ScrollArea className="h-[280px] rounded-md border">
+							<ScrollArea className="h-[280px] rounded-lg border">
 								<ToggleGroup
 									type="multiple"
 									value={field.state.value}
 									onValueChange={field.handleChange}
 									spacing={0}
 									orientation="vertical"
-									className="p-1 w-full"
+									className="p-1.5 w-full"
 									aria-invalid={isInvalid}
 								>
 									{results.map((user, index) => (
-										<ToggleGroupItem
+										<UserListItem
 											key={user._id}
-											value={user._id}
-											ref={index === results.length - 1 ? ref : undefined}
-											className="w-full justify-start gap-3 px-3 py-2.5 h-auto rounded-sm data-[state=on]:bg-primary/10 data-[state=on]:text-primary hover:bg-accent/50"
-										>
-											<div className="relative flex items-center justify-center border rounded-full size-10 bg-accent text-accent-foreground shrink-0 text-sm font-medium">
-												<span className="data-[state=on]:opacity-0">
-													{getInitials(user.name)}
-												</span>
-												<CheckCheck className="size-5 absolute inset-0 m-auto hidden data-[state=on]:block" />
-											</div>
-											<span className="text-sm font-medium truncate">
-												{user.name}
-											</span>
-										</ToggleGroupItem>
+											user={user}
+											isLast={index === results.length - 1}
+											forwardRef={ref}
+										/>
 									))}
 								</ToggleGroup>
 							</ScrollArea>
-							<FieldDescription className="text-xs">
-								{field.state.value.length}{" "}
+							<FieldDescription className="text-xs text-muted-foreground leading-relaxed">
+								<span className="font-semibold tabular-nums">
+									{field.state.value.length}
+								</span>{" "}
 								{field.state.value.length === 1 ? "user" : "users"} selected
 							</FieldDescription>
 							{isInvalid && <FieldError errors={field.state.meta.errors} />}
@@ -289,12 +299,54 @@ function NewChatContent() {
 				}}
 			</form.Field>
 			<Button
-				className="w-full"
+				className="w-full font-semibold"
 				variant={"secondary"}
 				disabled={form.state.isSubmitting}
 			>
 				{form.state.isSubmitting ? <Spinner /> : "Create chat →"}
 			</Button>
 		</form>
+	);
+}
+
+function UserListItem({
+	user,
+	isLast,
+	forwardRef,
+}: {
+	user: {
+		_id: Id<"users">;
+		name: string;
+		selectedLanguage: string;
+		avatar: string;
+	};
+	isLast: boolean;
+	forwardRef?: React.Ref<HTMLButtonElement>;
+}) {
+	const { data } = useQuery({
+		...convexQuery(api.user.getUserAvatar, { userId: user._id }),
+		staleTime: Infinity,
+	});
+
+	return (
+		<ToggleGroupItem
+			key={user._id}
+			value={user._id}
+			ref={isLast ? forwardRef : undefined}
+			className="group w-full justify-start gap-3.5 px-3 py-3 h-auto rounded-md data-[state=on]:bg-primary/10 data-[state=on]:text-primary hover:bg-accent/50 transition-colors"
+		>
+			<div className="relative flex items-center justify-center border rounded-full size-11 bg-accent text-accent-foreground shrink-0 text-sm font-semibold">
+				<Avatar className="group-data-[state=on]:hidden block">
+					<AvatarImage src={data} alt={user.name} />
+					<AvatarFallback className="text-sm font-semibold">
+						{getInitials(user.name)}
+					</AvatarFallback>
+				</Avatar>
+				<CheckCheck className="size-5 absolute inset-0 m-auto hidden group-data-[state=on]:block" />
+			</div>
+			<span className="text-sm font-semibold truncate leading-tight">
+				{user.name}
+			</span>
+		</ToggleGroupItem>
 	);
 }

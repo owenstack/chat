@@ -1,7 +1,8 @@
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { protectedMutation, protectedQuery } from "./functions";
 
-export const setUpUser = mutation({
+export const setUpUser = protectedMutation({
 	args: {
 		selectedLanguage: v.string(),
 	},
@@ -31,6 +32,45 @@ export const setUpUser = mutation({
 			name: identity.name ?? "Anonymous",
 			tokenIdentifier: identity.tokenIdentifier,
 			selectedLanguage: args.selectedLanguage,
+			avatar: identity.pictureUrl ?? "/logo.png",
 		});
+	},
+});
+
+export const getPublicUsers = protectedQuery({
+	args: {
+		paginationOpts: paginationOptsValidator,
+		query: v.optional(v.string()),
+	},
+	handler: async (ctx, args) => {
+		const results = args.query
+			? await ctx.db
+					.query("users")
+					.withSearchIndex("name_search", (q) =>
+						q.search("name", args.query ?? ""),
+					)
+					.paginate(args.paginationOpts)
+			: await ctx.db.query("users").paginate(args.paginationOpts);
+
+		const data = results.page
+			.filter((user) => user.tokenIdentifier !== ctx.user.tokenIdentifier)
+			.map(({ tokenIdentifier, _creationTime, ...rest }) => rest);
+		return {
+			...results,
+			page: data,
+		};
+	},
+});
+
+export const getUserAvatar = protectedQuery({
+	args: {
+		userId: v.id("users"),
+	},
+	handler: async (ctx, args) => {
+		const avatar = await ctx.db.get(args.userId).then((user) => user?.avatar);
+		if (!avatar) {
+			throw new Error("User not found");
+		}
+		return avatar;
 	},
 });

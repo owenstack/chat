@@ -22,7 +22,7 @@ export const Route = createFileRoute("/app/")({
 
 function RouteComponent() {
 	const { isLoading, status, loadMore, results } = usePaginatedQuery(
-		api.chat.getRooms,
+		api.room.getRooms,
 		{},
 		{ initialNumItems: 10 },
 	);
