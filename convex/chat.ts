@@ -96,7 +96,7 @@ export const getMessages = protectedQuery({
 		const messages = await ctx.db
 			.query("messages")
 			.withIndex("by_room", (q) => q.eq("roomId", args.roomId))
-			.order("desc")
+			.order("asc")
 			.paginate(args.paginationOpts);
 		const data = await Promise.all(
 			messages.page.map(async (message) => {

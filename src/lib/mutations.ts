@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { db } from "../db/client";
 import { uid } from "./helpers";
 import { useMe } from "./hooks";
 
@@ -29,8 +28,6 @@ export function useSendMessage() {
 			isUserMessage: true,
 		};
 
-		db?.messages.insert(tempMessage);
-
 		const queryArgs = {
 			roomId: args.roomId as Id<"rooms">,
 			paginationOpts: { numItems: 10, cursor: null },
@@ -52,17 +49,6 @@ export function useSendMessage() {
 	return useMutation({
 		mutationFn,
 		onSuccess: (_newId, variables) => {
-			const tempId = tempIdRef.current;
-			if (tempId) {
-				db?.messages
-					.findOne(tempId)
-					.exec()
-					.then((doc) => {
-						if (doc) {
-							doc.remove();
-						}
-					});
-			}
 			queryClient.invalidateQueries({
 				queryKey: ["messages", variables.roomId],
 			});

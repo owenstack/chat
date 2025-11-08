@@ -18,26 +18,49 @@ import {
 import { Spinner } from "./ui/spinner";
 
 export function Header() {
+
 	const { isAuthenticated, isLoading } = useConvexAuth();
+
 	const { loginWithRedirect } = useAuth0();
+
 	return (
-		<header className="fixed top-0 flex items-center justify-between border border-b px-4 py-2 w-full z-20">
+
+		<header className="fixed top-0 flex items-center justify-between border-b bg-background px-4 py-2 w-full z-20">
+
 			<Logo />
+
 			<div className="flex items-center gap-2 ml-auto">
+
 				<NewChat />
+
 				{isLoading ? (
+
 					<Spinner />
+
 				) : isAuthenticated ? (
+
 					<UserButton />
+
 				) : (
+
 					<Button
+
 						variant={"secondary"}
+
 						onClick={() => loginWithRedirect()}
+
 					></Button>
-				)}
+
+				)
+
+			}
+
 			</div>
+
 		</header>
+
 	);
+
 }
 
 function UserButton() {

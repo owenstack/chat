@@ -1,7 +1,6 @@
-import { convexQuery } from "@convex-dev/react-query";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useConvex } from "convex/react";
 import {
 	ArrowUp,
 	Check,
@@ -11,8 +10,7 @@ import {
 	PlusCircle,
 	X,
 } from "lucide-react";
-import { type FormEvent, useEffect } from "react";
-import { useRxQuery } from "rxdb-hooks";
+import type { FormEvent } from "react";
 import { toast } from "sonner";
 import { useIntersectionObserver, useLocalStorage } from "usehooks-ts";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +37,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { db } from "@/db/client";
+
 import { formatTimeAgo } from "@/lib/helpers";
 import { useSendMessage } from "@/lib/mutations";
 import { api } from "../../../convex/_generated/api";
@@ -62,60 +60,35 @@ export const Route = createFileRoute("/app/$roomId")({
 
 function RouteComponent() {
 	const { roomId } = Route.useParams();
-	const convex = useConvex();
-	const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
-		useInfiniteQuery({
-			queryKey: ["messages", roomId],
-			queryFn: ({ pageParam }: { pageParam: string | null }) =>
-				convex.query(api.chat.getMessages, {
-					roomId: roomId as Id<"rooms">,
-					paginationOpts: { numItems: 10, cursor: pageParam },
-				}),
-			initialPageParam: null,
-			getNextPageParam: (lastPage) =>
-				lastPage.isDone ? null : lastPage.continueCursor,
-		});
-
-	useEffect(() => {
-		if (data) {
-			const messages = data.pages.flatMap((page) => page.page);
-			db?.messages.bulkUpsert(messages);
-		}
-	}, [data]);
-
-	const { result: messages, isFetching: isFetchingMessages } = useRxQuery(
-		db?.messages.find({
-			selector: {
-				roomId: roomId as Id<"rooms">,
-			},
-			sort: [{ createdAt: "asc" }],
-		}),
+	const { results, isLoading, status, loadMore } = useConvexPaginatedQuery(
+		api.chat.getMessages,
+		{ roomId: roomId as Id<"rooms"> },
+		{ initialNumItems: 10 },
 	);
-
 	const { ref, isIntersecting } = useIntersectionObserver({
 		threshold: 0.5,
 	});
 
-	if (isIntersecting && hasNextPage && !isFetchingNextPage) {
-		fetchNextPage();
+	if (isIntersecting && status === "CanLoadMore" && !isLoading) {
+		loadMore(10);
 	}
 
 	return (
-		<div className="flex flex-col h-screen">
+		<div className="flex flex-col h-full">
 			<Conversation className="flex-1">
 				<ConversationContent className="pb-24">
-					{isFetchingNextPage && (
+					{status === "LoadingMore" && (
 						<div className="flex justify-center py-4">
 							<Spinner />
 						</div>
 					)}
-					{isFetchingMessages ? (
+					{isLoading ? (
 						<ConversationEmptyState
 							title="Loading..."
 							description="Please wait while we fetch your messages"
 							icon={<Spinner />}
 						/>
-					) : messages.length === 0 ? (
+					) : results.length === 0 ? (
 						<ConversationEmptyState
 							title="No messages yet"
 							description="Start the conversation by sending a message below"
@@ -123,12 +96,12 @@ function RouteComponent() {
 						/>
 					) : (
 						<div className="space-y-4">
-							{messages.map((message: ChatMessageType, index: number) => (
+							{results.map((message: ChatMessageType, index: number) => (
 								<ChatMessage
 									key={message._id}
 									message={message}
 									forwardRef={ref}
-									isLast={index === messages.length - 1}
+									isLast={index === results.length - 1}
 								/>
 							))}
 						</div>
