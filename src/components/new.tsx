@@ -78,16 +78,16 @@ export function NewChat({ showMessage = false }) {
 						className={showMessage ? "gap-2 font-medium" : ""}
 					>
 						<SquarePen className="size-5" />
-						{showMessage && <span>Start new chat</span>}
+						{showMessage && <span>New Chat</span>}
 					</Button>
 				</DialogTrigger>
 				<DialogContent className="sm:max-w-[550px]">
 					<DialogHeader className="space-y-3 pb-2">
 						<DialogTitle className="text-2xl font-semibold tracking-tight">
-							New chat
+							Create New Conversation
 						</DialogTitle>
 						<DialogDescription className="text-base text-muted-foreground leading-relaxed">
-							Select users you want to chat with
+							Choose who you'd like to chat with - individuals or groups
 						</DialogDescription>
 					</DialogHeader>
 					<div className="py-2">
@@ -115,16 +115,16 @@ export function NewChat({ showMessage = false }) {
 					className={showMessage ? "gap-2 font-medium" : ""}
 				>
 					<SquarePen className="size-5" />
-					{showMessage && <span>Start new chat</span>}
+					{showMessage && <span>New Chat</span>}
 				</Button>
 			</DrawerTrigger>
 			<DrawerContent className="px-4">
 				<DrawerHeader className="space-y-2.5 text-left pb-2">
 					<DrawerTitle className="text-2xl font-semibold tracking-tight">
-						New chat
+						Create New Conversation
 					</DrawerTitle>
 					<DrawerDescription className="text-base text-muted-foreground leading-relaxed">
-						Select users you want to chat with
+						Choose who you'd like to chat with - individuals or groups
 					</DrawerDescription>
 				</DrawerHeader>
 				<div className="py-2">
@@ -175,7 +175,7 @@ function NewChatContent() {
 					memberIds: value.memberIds as Id<"users">[],
 				}),
 				{
-					loading: "Creating new chat room...",
+					loading: "Creating your conversation...",
 					success: (res) => {
 						navigate({
 							to: "/app/$roomId",
@@ -209,7 +209,7 @@ function NewChatContent() {
 								htmlFor={field.name}
 								className="text-sm font-semibold"
 							>
-								Chat name
+								Conversation Name
 							</FieldLabel>
 							<InputGroup>
 								<InputGroupAddon align="inline-start">
@@ -226,7 +226,7 @@ function NewChatContent() {
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 									aria-invalid={isInvalid}
-									placeholder="e.g., Team Discussion"
+									placeholder="e.g., Weekend Plans"
 									className="text-sm"
 									required
 								/>
@@ -249,7 +249,7 @@ function NewChatContent() {
 								htmlFor={field.name}
 								className="text-sm font-semibold"
 							>
-								Participants
+								Add Participants
 							</FieldLabel>
 							<InputGroup>
 								<InputGroupAddon>
@@ -317,7 +317,7 @@ function NewChatContent() {
 				variant={"secondary"}
 				disabled={form.state.isSubmitting}
 			>
-				{form.state.isSubmitting ? <Spinner /> : "Create chat →"}
+				{form.state.isSubmitting ? <Spinner /> : "Create Chat"}
 			</Button>
 		</form>
 	);

@@ -90,8 +90,8 @@ function RouteComponent() {
 						/>
 					) : results.length === 0 ? (
 						<ConversationEmptyState
-							title="No messages yet"
-							description="Start the conversation by sending a message below"
+							title="Conversation starts here"
+							description="Break the ice! Send your first message to begin chatting."
 							icon={<MessageSquareX className="size-12" />}
 						/>
 					) : (
@@ -209,7 +209,7 @@ function ChatInput() {
 							</InputGroupButton>
 						</TooltipTrigger>
 						<TooltipContent side="top">
-							<p className="text-sm">Media handling is work in progress</p>
+							<p className="text-sm">Media sharing coming soon!</p>
 						</TooltipContent>
 					</Tooltip>
 					<InputGroupButton

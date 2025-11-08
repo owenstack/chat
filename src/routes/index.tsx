@@ -62,11 +62,12 @@ function RouteComponent() {
 				<Logo className="size-24" />
 				<div className="space-y-3">
 					<h1 className="text-5xl font-semibold tracking-tight lg:text-6xl">
-						Speak the world's language. Instantly
+						Break Language Barriers with Instant Chat
 					</h1>
 					<p className="text-lg text-muted-foreground lg:text-xl">
-						Welcome to chat.efobi.dev. Select your default language and click
-						continue to get started
+						Chat naturally in any language. Our AI-powered translation lets you
+						connect with anyone, anywhere, instantly. Select your preferred
+						language to begin.
 					</p>
 				</div>
 				<form
@@ -83,7 +84,7 @@ function RouteComponent() {
 							return (
 								<Field orientation={"responsive"} data-invalid={isInvalid}>
 									<FieldLabel htmlFor={field.name}>
-										Select your default language to continue
+										Choose your preferred language
 									</FieldLabel>
 									<Select
 										name={field.name}
@@ -102,7 +103,8 @@ function RouteComponent() {
 										</SelectContent>
 									</Select>
 									<FieldDescription>
-										For best results, select the language you're fluent with
+										This will be your default language for chatting and
+										translations
 									</FieldDescription>
 									{isInvalid && <FieldError errors={field.state.meta.errors} />}
 								</Field>
@@ -115,7 +117,7 @@ function RouteComponent() {
 						disabled={form.state.isSubmitting}
 						variant={"secondary"}
 					>
-						{form.state.isSubmitting ? <Spinner /> : "Start chatting"}
+						{form.state.isSubmitting ? <Spinner /> : "Get Started"}
 					</Button>
 				</form>
 			</div>

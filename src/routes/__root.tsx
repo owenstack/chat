@@ -37,9 +37,9 @@ export const Route = createRootRouteWithContext<{
 				content: "width=device-width, initial-scale=1",
 			},
 			...seo({
-				title:
-					"TanStack Start | Type-Safe, Client-First, Full-Stack React Framework",
-				description: `TanStack Start is a type-safe, client-first, full-stack React framework. `,
+				title: "Chat - Connect Across Languages",
+				description:
+					"Real-time chat with instant translation. Connect with people worldwide in their native language.",
 			}),
 		],
 		links: [
@@ -96,21 +96,23 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			</head>
 			<body>
 				{children}
-				<TanStackDevtools
-					config={{
-						position: "bottom-right",
-					}}
-					plugins={[
-						{
-							name: "Router",
-							render: <TanStackRouterDevtoolsPanel />,
-						},
-						{
-							name: "Query",
-							render: <ReactQueryDevtoolsPanel />,
-						},
-					]}
-				/>
+				{import.meta.env.DEV && (
+					<TanStackDevtools
+						config={{
+							position: "bottom-right",
+						}}
+						plugins={[
+							{
+								name: "Router",
+								render: <TanStackRouterDevtoolsPanel />,
+							},
+							{
+								name: "Query",
+								render: <ReactQueryDevtoolsPanel />,
+							},
+						]}
+					/>
+				)}
 				<Scripts />
 			</body>
 		</html>

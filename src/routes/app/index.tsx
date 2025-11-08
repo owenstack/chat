@@ -130,10 +130,11 @@ function ChatEmpty() {
 						<MessageSquareX className="size-12" />
 					</EmptyMedia>
 					<EmptyTitle className="text-2xl font-semibold">
-						No Chats Yet
+						Ready to Connect?
 					</EmptyTitle>
 					<EmptyDescription className="text-base text-muted-foreground max-w-md">
-						Create a new chat to start a conversation with friends or groups
+						Start your first conversation by creating a new chat with friends or
+						groups
 					</EmptyDescription>
 				</EmptyHeader>
 				<EmptyContent>
