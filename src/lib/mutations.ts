@@ -1,11 +1,71 @@
-// import { useConvexMutation } from "@convex-dev/react-query";
-// import { useMutation } from "@tanstack/react-query";
-// import { api } from "../../convex/_generated/api";
+import { useConvexMutation } from "@convex-dev/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { db } from "../db/client";
+import { uid } from "./helpers";
+import { useMe } from "./hooks";
 
-// export function useCreateRoom() {
-// 	const mutationFn = useConvexMutation(
-// 		api.chat.createRoom,
-// 	).withOptimisticUpdate((localStore, args) => {
-// 		// const room = localStore.getQuery(api.chat.)
-// 	});
-// }
+export function useSendMessage() {
+	const me = useMe();
+	const tempIdRef = useRef<string | null>(null);
+	const queryClient = useQueryClient();
+
+	const mutationFn = useConvexMutation(
+		api.chat.sendMessage,
+	).withOptimisticUpdate((localStore, args) => {
+		if (!me) return;
+		const tempId = `temp-${uid()}` as Id<"messages">;
+		tempIdRef.current = tempId;
+		const tempMessage = {
+			_id: tempId,
+			authorId: me._id,
+			roomId: args.roomId,
+			originalText: args.message,
+			sourceLanguage: args.sourceLanguage,
+			createdAt: Date.now(),
+			status: "sending" as const,
+			isUserMessage: true,
+		};
+
+		db?.messages.insert(tempMessage);
+
+		const queryArgs = {
+			roomId: args.roomId as Id<"rooms">,
+			paginationOpts: { numItems: 10, cursor: null },
+		};
+
+		const previousMessages = localStore.getQuery(
+			api.chat.getMessages,
+			queryArgs,
+		);
+
+		if (previousMessages) {
+			localStore.setQuery(api.chat.getMessages, queryArgs, {
+				...previousMessages,
+				page: [tempMessage, ...previousMessages.page],
+			});
+		}
+	});
+
+	return useMutation({
+		mutationFn,
+		onSuccess: (_newId, variables) => {
+			const tempId = tempIdRef.current;
+			if (tempId) {
+				db?.messages
+					.findOne(tempId)
+					.exec()
+					.then((doc) => {
+						if (doc) {
+							doc.remove();
+						}
+					});
+			}
+			queryClient.invalidateQueries({
+				queryKey: ["messages", variables.roomId],
+			});
+		},
+	});
+}

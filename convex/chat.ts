@@ -1,4 +1,3 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateObject } from "ai";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
@@ -81,7 +80,10 @@ export const sendMessage = protectedMutation({
 				);
 			}),
 		);
-		return true;
+		await ctx.db.patch(args.roomId, {
+			lastActivityAt: Date.now(),
+		});
+		return messageId;
 	},
 });
 
@@ -97,32 +99,31 @@ export const getMessages = protectedQuery({
 			.order("desc")
 			.paginate(args.paginationOpts);
 		const data = await Promise.all(
-			messages.page.map(
-				async ({ _creationTime, authorId, roomId, ...rest }) => {
-					const isUserMessage = authorId === ctx.user._id;
+			messages.page.map(async (message) => {
+				const { _creationTime, ...rest } = message;
+				const isUserMessage = rest.authorId === ctx.user._id;
 
-					if (!isUserMessage) {
-						const userMessage = await ctx.db
-							.query("user_messages")
-							.withIndex("by_user_message", (q) =>
-								q.eq("userId", ctx.user._id).eq("messageId", rest._id),
-							)
-							.unique();
-						if (userMessage) {
-							return {
-								...rest,
-								originalText: userMessage.translatedText,
-								isUserMessage,
-							};
-						}
+				if (!isUserMessage) {
+					const userMessage = await ctx.db
+						.query("user_messages")
+						.withIndex("by_user_message", (q) =>
+							q.eq("userId", ctx.user._id).eq("messageId", rest._id),
+						)
+						.unique();
+					if (userMessage) {
+						return {
+							...rest,
+							originalText: userMessage.translatedText,
+							isUserMessage,
+						};
 					}
+				}
 
-					return {
-						...rest,
-						isUserMessage,
-					};
-				},
-			),
+				return {
+					...rest,
+					isUserMessage,
+				};
+			}),
 		);
 		return {
 			...messages,
@@ -159,10 +160,6 @@ export const getAITranslation = action({
 		if (cached) {
 			translatedText = cached.translatedText;
 		} else {
-			const openRouter = createOpenRouter({
-				apiKey: process.env.OPENROUTER_API_KEY,
-			});
-
 			let prompt = `Translate from ${args.sourceLanguage} to ${args.targetLanguage}: ${args.message}`;
 
 			if (args.previousMessages && args.previousMessages.length > 0) {
@@ -176,11 +173,12 @@ export const getAITranslation = action({
 			}
 
 			const { object } = await generateObject({
-				model: openRouter.chat("google/gemma-3-27b-it:free"),
+				model: "minimax/minimax-m2",
 				system,
-				prompt: prompt,
+				prompt,
 				schema: messageSchema,
 			});
+
 			translatedText = object.message;
 			await ctx.runMutation(internal.chat.storeTranslation, {
 				sourceText: args.message,

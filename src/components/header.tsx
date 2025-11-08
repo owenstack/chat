@@ -21,7 +21,7 @@ export function Header() {
 	const { isAuthenticated, isLoading } = useConvexAuth();
 	const { loginWithRedirect } = useAuth0();
 	return (
-		<header className="fixed top-0 flex items-center justify-between border border-b px-4 py-2 w-full z-10">
+		<header className="fixed top-0 flex items-center justify-between border border-b px-4 py-2 w-full z-20">
 			<Logo />
 			<div className="flex items-center gap-2 ml-auto">
 				<NewChat />

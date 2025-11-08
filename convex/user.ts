@@ -1,8 +1,16 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { protectedMutation, protectedQuery } from "./functions";
+import { mutation } from "./_generated/server";
+import { protectedQuery } from "./functions";
 
-export const setUpUser = protectedMutation({
+export const getMe = protectedQuery({
+	args: {},
+	handler: async (ctx) => {
+		return ctx.user;
+	},
+});
+
+export const setUpUser = mutation({
 	args: {
 		selectedLanguage: v.string(),
 	},
@@ -54,7 +62,7 @@ export const getPublicUsers = protectedQuery({
 
 		const data = results.page
 			.filter((user) => user.tokenIdentifier !== ctx.user.tokenIdentifier)
-			.map(({ tokenIdentifier, _creationTime, ...rest }) => rest);
+			.map(({ tokenIdentifier, ...rest }) => rest);
 		return {
 			...results,
 			page: data,
@@ -62,15 +70,17 @@ export const getPublicUsers = protectedQuery({
 	},
 });
 
-export const getUserAvatar = protectedQuery({
+export const getUserPublicDetails = protectedQuery({
 	args: {
 		userId: v.id("users"),
 	},
 	handler: async (ctx, args) => {
-		const avatar = await ctx.db.get(args.userId).then((user) => user?.avatar);
-		if (!avatar) {
-			throw new Error("User not found");
-		}
-		return avatar;
+		return await ctx.db.get(args.userId).then((user) => {
+			return {
+				avatar: user?.avatar,
+				name: user?.name,
+				selectedLanguage: user?.selectedLanguage,
+			};
+		});
 	},
 });

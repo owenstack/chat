@@ -14,9 +14,9 @@ import { mutation, type QueryCtx, query } from "./_generated/server";
 export const rules = async (ctx: QueryCtx) =>
 	({
 		users: {
-			read: async ({ user }, targetUser) => {
-				// Users can read their own profile
-				return user._id === targetUser._id;
+			read: async () => {
+				// Any user can read any other user's public data
+				return true;
 			},
 			modify: async ({ user }, targetUser) => {
 				// Only allow users to modify their own profile
@@ -35,8 +35,14 @@ export const rules = async (ctx: QueryCtx) =>
 				return !!membership;
 			},
 			modify: async ({ user }, room) => {
-				// Only the creator can modify the room
-				return room.createdBy === user._id;
+				// User can modify a room if they're a member
+				const membership = await ctx.db
+					.query("user_rooms")
+					.withIndex("by_user_room", (q) =>
+						q.eq("userId", user._id).eq("roomId", room._id),
+					)
+					.unique();
+				return !!membership;
 			},
 		},
 		user_rooms: {

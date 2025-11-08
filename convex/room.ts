@@ -19,7 +19,7 @@ export const getRooms = protectedQuery({
 			userRooms.page.map((userRoom) => ctx.db.get(userRoom.roomId)),
 		).then((rooms) => rooms.filter((room) => room !== null));
 
-		const data = rooms.map(({ _creationTime, createdBy, ...rest }) => rest);
+		const data = rooms.map(({ createdBy, ...rest }) => rest);
 
 		return {
 			...userRooms,

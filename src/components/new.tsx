@@ -1,6 +1,5 @@
-import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import { useConvexMutation } from "@convex-dev/react-query";
 import { useForm } from "@tanstack/react-form";
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { usePaginatedQuery } from "convex/react";
 import {
@@ -51,6 +50,7 @@ import {
 } from "./ui/drawer";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { ScrollArea } from "./ui/scroll-area";
+import { Skeleton } from "./ui/skeleton";
 import { Spinner } from "./ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 
@@ -277,13 +277,27 @@ function NewChatContent() {
 									className="p-1.5 w-full"
 									aria-invalid={isInvalid}
 								>
+									{status === "LoadingFirstPage" && <ChatLoading />}
 									{results.map((user, index) => (
-										<UserListItem
+										<ToggleGroupItem
 											key={user._id}
-											user={user}
-											isLast={index === results.length - 1}
-											forwardRef={ref}
-										/>
+											value={user._id}
+											ref={index === results.length - 1 ? ref : undefined}
+											className="group w-full justify-start gap-3.5 px-3 py-3 h-auto rounded-md data-[state=on]:bg-primary/10 data-[state=on]:text-primary hover:bg-accent/50 transition-colors"
+										>
+											<div className="relative flex items-center justify-center border rounded-full size-11 bg-accent text-accent-foreground shrink-0 text-sm font-semibold">
+												<Avatar className="group-data-[state=on]:hidden block">
+													<AvatarImage src={user.avatar} alt={user.name} />
+													<AvatarFallback className="text-sm font-semibold">
+														{getInitials(user.name)}
+													</AvatarFallback>
+												</Avatar>
+												<CheckCheck className="size-5 absolute inset-0 m-auto hidden group-data-[state=on]:block" />
+											</div>
+											<span className="text-sm font-semibold truncate leading-tight">
+												{user.name}
+											</span>
+										</ToggleGroupItem>
 									))}
 								</ToggleGroup>
 							</ScrollArea>
@@ -309,44 +323,19 @@ function NewChatContent() {
 	);
 }
 
-function UserListItem({
-	user,
-	isLast,
-	forwardRef,
-}: {
-	user: {
-		_id: Id<"users">;
-		name: string;
-		selectedLanguage: string;
-		avatar: string;
-	};
-	isLast: boolean;
-	forwardRef?: React.Ref<HTMLButtonElement>;
-}) {
-	const { data } = useQuery({
-		...convexQuery(api.user.getUserAvatar, { userId: user._id }),
-		staleTime: Infinity,
-	});
-
+function ChatLoading() {
 	return (
-		<ToggleGroupItem
-			key={user._id}
-			value={user._id}
-			ref={isLast ? forwardRef : undefined}
-			className="group w-full justify-start gap-3.5 px-3 py-3 h-auto rounded-md data-[state=on]:bg-primary/10 data-[state=on]:text-primary hover:bg-accent/50 transition-colors"
-		>
-			<div className="relative flex items-center justify-center border rounded-full size-11 bg-accent text-accent-foreground shrink-0 text-sm font-semibold">
-				<Avatar className="group-data-[state=on]:hidden block">
-					<AvatarImage src={data} alt={user.name} />
-					<AvatarFallback className="text-sm font-semibold">
-						{getInitials(user.name)}
-					</AvatarFallback>
-				</Avatar>
-				<CheckCheck className="size-5 absolute inset-0 m-auto hidden group-data-[state=on]:block" />
-			</div>
-			<span className="text-sm font-semibold truncate leading-tight">
-				{user.name}
-			</span>
-		</ToggleGroupItem>
+		<div className="p-1.5 w-full space-y-1.5">
+			{new Array(6).fill(0).map((_, index) => (
+				<div
+					// biome-ignore lint/suspicious/noArrayIndexKey: <index used for iteration>
+					key={index}
+					className="flex items-center gap-3.5 px-3 py-3 h-auto rounded-md"
+				>
+					<Skeleton className="size-11 rounded-full shrink-0" />
+					<Skeleton className="h-4 w-32 flex-1" />
+				</div>
+			))}
+		</div>
 	);
 }
