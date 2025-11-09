@@ -1,3 +1,4 @@
+//@ts-check
 import * as Sentry from "@sentry/tanstackstart-react";
 
 Sentry.init({
@@ -5,4 +6,12 @@ Sentry.init({
 	// Adds request headers and IP for users, for more info visit:
 	// https://docs.sentry.io/platforms/javascript/guides/tanstackstart-react/configuration/options/#sendDefaultPii
 	sendDefaultPii: true,
+	integrations: [
+		Sentry.feedbackIntegration({
+			colorScheme: "system",
+		}),
+		Sentry.replayIntegration(),
+	],
+	replaysSessionSampleRate: 0.1,
+	replaysOnErrorSampleRate: 1.0,
 });

@@ -40,6 +40,7 @@ import { formatTimeAgo } from "@/lib/helpers";
 import { useSendMessage } from "@/lib/mutations";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
 
 type ChatMessageType = {
 	_id: Id<"messages">;
@@ -58,6 +59,17 @@ export const Route = createFileRoute("/app/$roomId")({
 		useEffect(() => {
 			Sentry.captureException(error);
 		}, [error]);
+		return (
+			<div className="flex flex-col items-center justify-center min-h-screen p-4">
+				<div className="max-w-md text-center">
+					<h1 className="text-2xl font-semibold mb-4">Something went wrong</h1>
+					<p className="text-muted-foreground mb-4">
+						We've been notified and are looking into it.
+					</p>
+					<Button onClick={() => window.location.reload()}>Reload page</Button>
+				</div>
+			</div>
+		);
 	},
 	component: RouteComponent,
 });
