@@ -26,7 +26,7 @@ import { Spinner } from "./ui/spinner";
 
 export function Header() {
 	const { isAuthenticated, isLoading } = useConvexAuth();
-
+	const t = useTranslations();
 	const { loginWithRedirect } = useAuth0();
 
 	return (
@@ -41,10 +41,9 @@ export function Header() {
 				) : isAuthenticated ? (
 					<UserButton />
 				) : (
-					<Button
-						variant={"secondary"}
-						onClick={() => loginWithRedirect()}
-					></Button>
+					<Button variant={"secondary"} onClick={() => loginWithRedirect()}>
+						{t.common.login}
+					</Button>
 				)}
 			</div>
 		</header>
@@ -97,6 +96,7 @@ function UserButton() {
 				<DropdownMenuSeparator />
 				<DropdownMenuSub>
 					<DropdownMenuSubTrigger>
+						{languages.find((l) => l.value === lang.language)?.flag}{" "}
 						{languages.find((l) => l.value === lang.language)?.label}
 					</DropdownMenuSubTrigger>
 					<DropdownMenuSubContent>
@@ -109,7 +109,7 @@ function UserButton() {
 									key={language.value}
 									value={language.value}
 								>
-									{language.label}
+									{language.label} {language.flag}
 								</DropdownMenuRadioItem>
 							))}
 						</DropdownMenuRadioGroup>

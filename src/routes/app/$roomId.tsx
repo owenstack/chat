@@ -1,6 +1,7 @@
 import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
 	ArrowUp,
 	Check,
@@ -11,15 +12,11 @@ import {
 	X,
 } from "lucide-react";
 import type { FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useIntersectionObserver, useLocalStorage } from "usehooks-ts";
+import { useLocalStorage } from "usehooks-ts";
 import { Badge } from "@/components/ui/badge";
-import {
-	Conversation,
-	ConversationContent,
-	ConversationEmptyState,
-	ConversationScrollButton,
-} from "@/components/ui/conversation";
+import { ConversationEmptyState } from "@/components/ui/conversation";
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -39,7 +36,6 @@ import {
 } from "@/components/ui/tooltip";
 import { type Language, useTranslations } from "@/lib/content";
 import { formatTimeAgo } from "@/lib/helpers";
-import { useMounted } from "@/lib/hooks";
 import { useSendMessage } from "@/lib/mutations";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -68,60 +64,142 @@ function RouteComponent() {
 		{ roomId: roomId as Id<"rooms"> },
 		{ initialNumItems: 10 },
 	);
-	const mounted = useMounted();
-	const { ref, isIntersecting } = useIntersectionObserver({
-		threshold: 0.5,
-	});
 	const { data: members } = useQuery({
 		...convexQuery(api.room.getRoomMembers, { roomId: roomId as Id<"rooms"> }),
 		staleTime: Infinity,
 	});
 
-	if (isIntersecting && status === "CanLoadMore" && !isLoading) {
-		loadMore(10);
-	}
+	const parentRef = useRef<HTMLDivElement>(null);
+	const messages = useMemo(() => [...results].reverse(), [results]);
+	const count = messages.length;
+	const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+	const prevCountRef = useRef(0);
+
+	const virtualizer = useVirtualizer({
+		count,
+		getScrollElement: () => parentRef.current,
+		estimateSize: () => 100,
+		overscan: 5,
+	});
+
+	const virtualItems = virtualizer.getVirtualItems();
+
+	// Load more messages when scrolling to top
+	useEffect(() => {
+		const [firstItem] = virtualItems;
+		if (!firstItem) return;
+
+		// Only trigger load more if we've already scrolled to bottom initially
+		if (
+			firstItem.index === 0 &&
+			status === "CanLoadMore" &&
+			!isLoading &&
+			hasScrolledToBottom
+		) {
+			loadMore(10);
+		}
+	}, [virtualItems, status, isLoading, loadMore, hasScrolledToBottom]);
+
+	// Scroll to bottom on initial load or when new messages arrive
+	useEffect(() => {
+		if (count === 0) return;
+
+		// Initial scroll to bottom
+		if (!hasScrolledToBottom && !isLoading) {
+			// Use setTimeout to ensure elements are measured
+			setTimeout(() => {
+				virtualizer.scrollToIndex(count - 1, {
+					align: "end",
+					behavior: "auto",
+				});
+				setHasScrolledToBottom(true);
+			}, 100);
+		}
+		// Scroll to bottom when new messages are added (not when loading older messages)
+		else if (count > prevCountRef.current && hasScrolledToBottom) {
+			// Only scroll if we added messages (not loaded older ones)
+			// Check if user is near bottom before auto-scrolling
+			const scrollElement = parentRef.current;
+			if (scrollElement) {
+				const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+				const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
+
+				if (isNearBottom) {
+					setTimeout(() => {
+						virtualizer.scrollToIndex(count - 1, {
+							align: "end",
+							behavior: "smooth",
+						});
+					}, 50);
+				}
+			}
+		}
+
+		prevCountRef.current = count;
+	}, [count, isLoading, virtualizer, hasScrolledToBottom]);
 
 	return (
 		<div className="flex flex-col h-full">
-			<Conversation className="flex-1">
-				<ConversationContent className="pb-24">
-					{status === "LoadingMore" && (
-						<div className="flex justify-center py-4">
-							<Spinner />
-						</div>
-					)}
-					{isLoading || !mounted ? (
-						<ConversationEmptyState
-							title={t.common.loading}
-							description={t.app.readyToConnect}
-							icon={<Spinner />}
-						/>
-					) : results.length === 0 ? (
-						<ConversationEmptyState
-							title={t.app.conversationStartsHere}
-							description={t.app.breakIceMessage}
-							icon={<MessageSquareX className="size-12" />}
-						/>
-					) : (
-						<div className="space-y-4">
-							{[...results]
-								.reverse()
-								.map((message: ChatMessageType, index: number) => (
-									<ChatMessage
-										key={message._id}
-										message={message}
-										forwardRef={ref}
-										isFirst={index === 0}
-										members={members}
-									/>
-								))}
-						</div>
-					)}
-					<ConversationScrollButton />
-				</ConversationContent>
-			</Conversation>
+			<div ref={parentRef} className="flex-1 overflow-y-auto pb-24">
+				{isLoading && count === 0 ? (
+					<ConversationEmptyState
+						title={t.common.loading}
+						description={t.app.readyToConnect}
+						icon={<Spinner />}
+					/>
+				) : count === 0 ? (
+					<ConversationEmptyState
+						title={t.app.conversationStartsHere}
+						description={t.app.breakIceMessage}
+						icon={<MessageSquareX className="size-12" />}
+					/>
+				) : (
+					<div
+						style={{
+							height: virtualizer.getTotalSize(),
+							width: "100%",
+							position: "relative",
+						}}
+					>
+						{status === "CanLoadMore" && isLoading && (
+							<div className="flex justify-center py-4">
+								<Spinner />
+							</div>
+						)}
+						{virtualizer.getVirtualItems().map((virtualItem) => {
+							const message = messages[virtualItem.index] as ChatMessageType;
+							return (
+								<div
+									key={virtualItem.key}
+									data-index={virtualItem.index}
+									ref={virtualizer.measureElement}
+									style={{
+										position: "absolute",
+										top: 0,
+										left: 0,
+										width: "100%",
+										transform: `translateY(${virtualItem.start}px)`,
+									}}
+								>
+									<ChatMessage message={message} members={members} />
+								</div>
+							);
+						})}
+					</div>
+				)}
+			</div>
 			<div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-				<ChatInput />
+				<ChatInput
+					onMessageSent={() => {
+						// Scroll to bottom after sending message
+						setTimeout(() => {
+							virtualizer.scrollToIndex(count, {
+								align: "end",
+								behavior: "smooth",
+							});
+						}, 50);
+					}}
+				/>
 			</div>
 		</div>
 	);
@@ -129,13 +207,9 @@ function RouteComponent() {
 
 function ChatMessage({
 	message,
-	forwardRef,
-	isFirst,
 	members,
 }: {
 	message: ChatMessageType;
-	forwardRef: React.Ref<HTMLDivElement>;
-	isFirst: boolean;
 	members:
 		| Record<
 				Id<"users">,
@@ -154,7 +228,7 @@ function ChatMessage({
 	const authorDetails = members?.[message.authorId];
 
 	return (
-		<div ref={isFirst ? forwardRef : null}>
+		<div className="p-4">
 			<Message from={message.isUserMessage ? "user" : "assistant"}>
 				<MessageAvatar
 					src={authorDetails?.avatar ?? ""}
@@ -206,7 +280,7 @@ function ChatMessage({
 	);
 }
 
-function ChatInput() {
+function ChatInput({ onMessageSent }: { onMessageSent: () => void }) {
 	const t = useTranslations();
 	const { roomId } = Route.useParams();
 	const { mutate, isPending, error } = useSendMessage();
@@ -219,11 +293,19 @@ function ChatInput() {
 		e.preventDefault();
 		const formData = new FormData(e.currentTarget);
 		const message = formData.get("message") as string;
-		mutate({
-			roomId: roomId as Id<"rooms">,
-			sourceLanguage: lang.language,
-			message: message.trim(),
-		});
+		if (!message.trim()) return;
+		mutate(
+			{
+				roomId: roomId as Id<"rooms">,
+				sourceLanguage: lang.language,
+				message: message.trim(),
+			},
+			{
+				onSuccess: () => {
+					onMessageSent();
+				},
+			},
+		);
 		e.currentTarget.reset();
 	};
 	if (error) {

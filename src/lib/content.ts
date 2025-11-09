@@ -1,12 +1,12 @@
 import { useLocalStorage } from "usehooks-ts";
 
 export const languages = [
-	{ value: "en", label: "English" },
-	{ value: "es", label: "Español" },
-	{ value: "fr", label: "Français" },
-	{ value: "de", label: "Deutsch" },
-	{ value: "zh", label: "中文" },
-	{ value: "ja", label: "日本語" },
+	{ value: "en", label: "English", flag: "🇺🇸" },
+	{ value: "es", label: "Español", flag: "🇪🇸" },
+	{ value: "fr", label: "Français", flag: "🇫🇷" },
+	{ value: "de", label: "Deutsch", flag: "🇩🇪" },
+	{ value: "zh", label: "中文", flag: "🇨🇳" },
+	{ value: "ja", label: "日本語", flag: "🇯🇵" },
 ] as const;
 
 export type Language = (typeof languages)[number]["value"];

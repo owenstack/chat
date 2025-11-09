@@ -90,7 +90,7 @@ function RouteComponent() {
 										<SelectContent position="item-aligned">
 											{languages.map((lang) => (
 												<SelectItem key={lang.value} value={lang.value}>
-													{lang.label}
+													{lang.label} {lang.flag}
 												</SelectItem>
 											))}
 										</SelectContent>

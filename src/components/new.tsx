@@ -1,6 +1,7 @@
 import { useConvexMutation } from "@convex-dev/react-query";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { usePaginatedQuery } from "convex/react";
 import {
 	CheckCheck,
@@ -9,13 +10,9 @@ import {
 	UserRound,
 	UsersRound,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-	useDebounceValue,
-	useIntersectionObserver,
-	useMediaQuery,
-} from "usehooks-ts";
+import { useDebounceValue, useMediaQuery } from "usehooks-ts";
 import { z } from "zod";
 import {
 	Field,
@@ -23,28 +20,25 @@ import {
 	FieldError,
 	FieldLabel,
 } from "@/components/ui/field";
-import { useTranslations } from "@/lib/content";
+import { languages, useTranslations } from "@/lib/content";
 import { getInitials } from "@/lib/helpers";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import {
 	Dialog,
-	DialogClose,
 	DialogContent,
 	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
 } from "./ui/dialog";
 import {
 	Drawer,
-	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
-	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle,
 	DrawerTrigger,
@@ -87,13 +81,6 @@ export function NewChat({ showMessage = false }) {
 					<div className="py-2">
 						<NewChatContent />
 					</div>
-					<DialogFooter className="gap-2 pt-2">
-						<DialogClose asChild>
-							<Button variant="outline" className="font-medium">
-								{t.common.cancel}
-							</Button>
-						</DialogClose>
-					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		);
@@ -124,16 +111,6 @@ export function NewChat({ showMessage = false }) {
 				<div className="py-2">
 					<NewChatContent />
 				</div>
-				<DrawerFooter className="gap-2 pt-4">
-					<Button type="submit" className="font-medium">
-						{t.newChat.createChat}
-					</Button>
-					<DrawerClose asChild>
-						<Button variant="outline" className="font-medium">
-							{t.common.cancel}
-						</Button>
-					</DrawerClose>
-				</DrawerFooter>
 			</DrawerContent>
 		</Drawer>
 	);
@@ -147,7 +124,7 @@ function NewChatContent() {
 	const { isLoading, status, loadMore, results } = usePaginatedQuery(
 		api.user.getPublicUsers,
 		{ query },
-		{ initialNumItems: 6 },
+		{ initialNumItems: 10 },
 	);
 	const mutationFn = useConvexMutation(api.room.createRoom);
 	const navigate = useNavigate();
@@ -187,12 +164,28 @@ function NewChatContent() {
 	});
 	const isGroup = form.state.values.memberIds.length > 1;
 
-	const { ref, isIntersecting } = useIntersectionObserver({
-		threshold: 0.5,
+	const parentRef = useRef<HTMLDivElement>(null);
+	const virtualizer = useVirtualizer({
+		count: results.length,
+		getScrollElement: () => parentRef.current,
+		estimateSize: () => 52,
+		overscan: 5,
 	});
-	if (isIntersecting && status === "CanLoadMore" && !isLoading) {
-		loadMore(6);
-	}
+
+	const virtualItems = virtualizer.getVirtualItems();
+
+	useEffect(() => {
+		const [lastItem] = [...virtualItems].reverse();
+		if (!lastItem) return;
+
+		if (
+			lastItem.index >= results.length - 1 &&
+			status === "CanLoadMore" &&
+			!isLoading
+		) {
+			loadMore(10);
+		}
+	}, [virtualItems, results.length, status, isLoading, loadMore]);
 
 	return (
 		<form
@@ -200,7 +193,7 @@ function NewChatContent() {
 				e.preventDefault();
 				form.handleSubmit();
 			}}
-			className="w-full space-y-5"
+			className="w-full space-y-2"
 		>
 			<form.Field name="name">
 				{(field) => {
@@ -270,38 +263,54 @@ function NewChatContent() {
 									</span>
 								</InputGroupAddon>
 							</InputGroup>
-							<ScrollArea className="h-[280px] rounded-lg border">
+							<ScrollArea
+								ref={parentRef}
+								className="sm:h-[200px] h-[120px] rounded-lg border"
+							>
 								<ToggleGroup
 									type="multiple"
 									value={field.state.value}
 									onValueChange={field.handleChange}
 									spacing={0}
 									orientation="vertical"
-									className="p-1.5 w-full"
+									className="p-1.5 w-full relative"
 									aria-invalid={isInvalid}
+									style={{ height: virtualizer.getTotalSize() }}
 								>
 									{status === "LoadingFirstPage" && <ChatLoading />}
-									{results.map((user, index) => (
-										<ToggleGroupItem
-											key={user._id}
-											value={user._id}
-											ref={index === results.length - 1 ? ref : undefined}
-											className="group w-full justify-start gap-3.5 px-3 py-3 h-auto rounded-md data-[state=on]:bg-primary/10 data-[state=on]:text-primary hover:bg-accent/50 transition-colors"
-										>
-											<div className="relative flex items-center justify-center border rounded-full size-11 bg-accent text-accent-foreground shrink-0 text-sm font-semibold">
-												<Avatar className="group-data-[state=on]:hidden block">
-													<AvatarImage src={user.avatar} alt={user.name} />
-													<AvatarFallback className="text-sm font-semibold">
-														{getInitials(user.name)}
-													</AvatarFallback>
-												</Avatar>
-												<CheckCheck className="size-5 absolute inset-0 m-auto hidden group-data-[state=on]:block" />
-											</div>
-											<span className="text-sm font-semibold truncate leading-tight">
-												{user.name}
-											</span>
-										</ToggleGroupItem>
-									))}
+									{virtualItems.map((virtualItem) => {
+										const user = results[virtualItem.index];
+										return (
+											<ToggleGroupItem
+												key={user._id}
+												value={user._id}
+												style={{
+													transform: `translateY(${virtualItem.start}px)`,
+												}}
+												className="group w-full justify-start gap-2 p-2 h-auto rounded-md data-[state=on]:bg-primary/10 data-[state=on]:text-primary hover:bg-accent/50 transition-colors absolute top-0 left-0"
+											>
+												<div className="relative flex items-center justify-center border rounded-full size-10 bg-accent text-accent-foreground shrink-0 text-sm font-semibold">
+													<Avatar className="group-data-[state=on]:hidden block">
+														<AvatarImage src={user.avatar} alt={user.name} />
+														<AvatarFallback className="text-sm font-semibold">
+															{getInitials(user.name)}
+														</AvatarFallback>
+													</Avatar>
+													<CheckCheck className="size-5 absolute inset-0 m-auto hidden group-data-[state=on]:block" />
+												</div>
+												<span className="text-sm font-semibold truncate leading-tight">
+													{user.name}
+												</span>
+												<Badge variant={"outline"}>
+													{
+														languages.find(
+															(lang) => lang.value === user.selectedLanguage,
+														)?.flag
+													}
+												</Badge>
+											</ToggleGroupItem>
+										);
+									})}
 								</ToggleGroup>
 							</ScrollArea>
 							<FieldDescription className="text-xs text-muted-foreground leading-relaxed">
