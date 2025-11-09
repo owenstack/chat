@@ -1,6 +1,8 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import { useConvexAuth } from "convex/react";
 import { LogOut, Moon, Sun } from "lucide-react";
+import { useLocalStorage } from "usehooks-ts";
+import { type Language, languages, useTranslations } from "@/lib/content";
 import { Logo } from "./logo";
 import { NewChat } from "./new";
 import { useTheme } from "./theme";
@@ -12,7 +14,12 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Spinner } from "./ui/spinner";
@@ -45,8 +52,14 @@ export function Header() {
 }
 
 function UserButton() {
+	const t = useTranslations();
 	const { user, logout } = useAuth0();
 	const { setTheme } = useTheme();
+	const [lang, setLang] = useLocalStorage<{ language: Language }>(
+		"lang",
+		{ language: "en" },
+		{ initializeWithValue: true },
+	);
 
 	return (
 		<DropdownMenu>
@@ -67,11 +80,11 @@ function UserButton() {
 				<DropdownMenuGroup>
 					<DropdownMenuItem onClick={() => setTheme("dark")}>
 						<Moon />
-						Dark
+						{t.common.dark}
 					</DropdownMenuItem>
 					<DropdownMenuItem onClick={() => setTheme("light")}>
 						<Sun />
-						Light
+						{t.common.light}
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				{/* <DropdownMenuSeparator />
@@ -82,6 +95,27 @@ function UserButton() {
 					Account Settings
 				</DropdownMenuItem> */}
 				<DropdownMenuSeparator />
+				<DropdownMenuSub>
+					<DropdownMenuSubTrigger>
+						{languages.find((l) => l.value === lang.language)?.label}
+					</DropdownMenuSubTrigger>
+					<DropdownMenuSubContent>
+						<DropdownMenuRadioGroup
+							value={lang.language}
+							onValueChange={(e) => setLang({ language: e as Language })}
+						>
+							{languages.map((language) => (
+								<DropdownMenuRadioItem
+									key={language.value}
+									value={language.value}
+								>
+									{language.label}
+								</DropdownMenuRadioItem>
+							))}
+						</DropdownMenuRadioGroup>
+					</DropdownMenuSubContent>
+				</DropdownMenuSub>
+				<DropdownMenuSeparator />
 				<DropdownMenuItem
 					onClick={() =>
 						logout({ logoutParams: { returnTo: window.location.origin } })
@@ -89,7 +123,7 @@ function UserButton() {
 					variant="destructive"
 				>
 					<LogOut />
-					Sign out
+					{t.common.signOut}
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

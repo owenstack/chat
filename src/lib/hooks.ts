@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useLocalStorage } from "usehooks-ts";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import type { Language } from "./content";
 
 export function useMe() {
 	return useQuery(api.user.getMe, {});
@@ -12,10 +13,10 @@ export function useStoreUserEffect() {
 	const { isLoading, isAuthenticated } = useConvexAuth();
 	const [userId, setUserId] = useState<Id<"users"> | null>(null);
 	const storeUser = useMutation(api.user.setUpUser);
-	const [lang] = useLocalStorage(
+	const [lang] = useLocalStorage<{ language: Language }>(
 		"lang",
 		{ language: "en" },
-		{ initializeWithValue: false },
+		{ initializeWithValue: true },
 	);
 
 	useEffect(() => {

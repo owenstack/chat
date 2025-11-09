@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { useTranslations } from "@/lib/content";
 import { formatTimeAgo } from "@/lib/helpers";
 import { api } from "../../../convex/_generated/api";
 
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/app/")({
 });
 
 function RouteComponent() {
+	const t = useTranslations();
 	const { isLoading, status, loadMore, results } = usePaginatedQuery(
 		api.room.getRooms,
 		{},
@@ -64,7 +66,7 @@ function RouteComponent() {
 					{status === "LoadingMore" && (
 						<div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground">
 							<Spinner />
-							<span>Loading more...</span>
+							<span>{t.app.loadingMore}</span>
 						</div>
 					)}
 				</div>
@@ -122,6 +124,7 @@ function ChatSkeleton() {
 }
 
 function ChatEmpty() {
+	const t = useTranslations();
 	return (
 		<div className="flex flex-col size-full items-center justify-center px-4">
 			<Empty>
@@ -130,17 +133,16 @@ function ChatEmpty() {
 						<MessageSquareX className="size-12" />
 					</EmptyMedia>
 					<EmptyTitle className="text-2xl font-semibold">
-						Ready to Connect?
+						{t.app.readyToConnect}
 					</EmptyTitle>
 					<EmptyDescription className="text-base text-muted-foreground max-w-md">
-						Start your first conversation by creating a new chat with friends or
-						groups
+						{t.app.startFirstConversation}
 					</EmptyDescription>
 				</EmptyHeader>
 				<EmptyContent>
 					<div className="flex flex-col gap-3 text-center mt-2">
 						<h3 className="text-sm font-medium text-foreground">
-							Start your first conversation
+							{t.app.startConversation}
 						</h3>
 						<NewChat showMessage />
 					</div>

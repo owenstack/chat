@@ -37,6 +37,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { type Language, useTranslations } from "@/lib/content";
 import { formatTimeAgo } from "@/lib/helpers";
 import { useMounted } from "@/lib/hooks";
 import { useSendMessage } from "@/lib/mutations";
@@ -60,6 +61,7 @@ export const Route = createFileRoute("/app/$roomId")({
 });
 
 function RouteComponent() {
+	const t = useTranslations();
 	const { roomId } = Route.useParams();
 	const { results, isLoading, status, loadMore } = useConvexPaginatedQuery(
 		api.chat.getMessages,
@@ -90,14 +92,14 @@ function RouteComponent() {
 					)}
 					{isLoading || !mounted ? (
 						<ConversationEmptyState
-							title="Loading..."
-							description="Please wait while we fetch your messages"
+							title={t.common.loading}
+							description={t.app.readyToConnect}
 							icon={<Spinner />}
 						/>
 					) : results.length === 0 ? (
 						<ConversationEmptyState
-							title="Conversation starts here"
-							description="Break the ice! Send your first message to begin chatting."
+							title={t.app.conversationStartsHere}
+							description={t.app.breakIceMessage}
 							icon={<MessageSquareX className="size-12" />}
 						/>
 					) : (
@@ -148,6 +150,7 @@ function ChatMessage({
 		  >
 		| undefined;
 }) {
+	const t = useTranslations();
 	const authorDetails = members?.[message.authorId];
 
 	return (
@@ -165,7 +168,9 @@ function ChatMessage({
 								<MessageContent>{message.displayText}</MessageContent>
 							</TooltipTrigger>
 							<TooltipContent>
-								<p className="text-sm">Original: {message.originalText}</p>
+								<p className="text-sm">
+									{t.common.original}: {message.originalText}
+								</p>
 							</TooltipContent>
 						</Tooltip>
 					) : (
@@ -202,12 +207,13 @@ function ChatMessage({
 }
 
 function ChatInput() {
+	const t = useTranslations();
 	const { roomId } = Route.useParams();
 	const { mutate, isPending, error } = useSendMessage();
-	const [lang] = useLocalStorage(
+	const [lang] = useLocalStorage<{ language: Language }>(
 		"lang",
 		{ language: "en" },
-		{ initializeWithValue: false },
+		{ initializeWithValue: true },
 	);
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -242,7 +248,7 @@ function ChatInput() {
 							</InputGroupButton>
 						</TooltipTrigger>
 						<TooltipContent side="top">
-							<p className="text-sm">Media sharing coming soon!</p>
+							<p className="text-sm">{t.common.mediaSharingComingSoon}</p>
 						</TooltipContent>
 					</Tooltip>
 					<InputGroupButton
@@ -253,18 +259,18 @@ function ChatInput() {
 					>
 						{isPending ? (
 							<>
-								<Spinner /> <span className="sr-only">Sending...</span>
+								<Spinner /> <span className="sr-only">{t.common.sending}</span>
 							</>
 						) : (
 							<>
-								<span className="sr-only">Send message</span>
+								<span className="sr-only">{t.common.sendMessage}</span>
 								<ArrowUp className="size-5" />
 							</>
 						)}
 					</InputGroupButton>
 				</InputGroupAddon>
 				<InputGroupInput
-					placeholder="Type your message..."
+					placeholder={t.common.typeYourMessage}
 					className="resize-none field-sizing-content"
 					autoFocus
 					required

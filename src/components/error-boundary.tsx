@@ -6,6 +6,7 @@ import {
 	useMatch,
 	useRouter,
 } from "@tanstack/react-router";
+import { useTranslations } from "@/lib/content";
 import { Button, buttonVariants } from "./ui/button";
 
 export function ErrorBoundary({ error }: ErrorComponentProps) {
@@ -14,6 +15,7 @@ export function ErrorBoundary({ error }: ErrorComponentProps) {
 		strict: false,
 		select: (state) => state.id === rootRouteId,
 	});
+	const t = useTranslations();
 
 	console.error(error);
 
@@ -26,22 +28,22 @@ export function ErrorBoundary({ error }: ErrorComponentProps) {
 						router.invalidate();
 					}}
 				>
-					Try Again
+					{t.common.tryAgain}
 				</Button>
 				{isRoot ? (
 					<Link to="/" className={buttonVariants({ variant: "link" })}>
-						Home
+						{t.common.home}
 					</Link>
 				) : (
 					<Link
 						to="/"
-						onClick={(e) => {
+						onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
 							e.preventDefault();
 							window.history.back();
 						}}
 						className={buttonVariants({ variant: "link" })}
 					>
-						Go Back
+						{t.common.back}
 					</Link>
 				)}
 			</div>

@@ -18,6 +18,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { type Language, languages, useTranslations } from "@/lib/content";
 
 export const Route = createFileRoute("/")({
 	component: RouteComponent,
@@ -30,31 +31,22 @@ const languageSchema = z.object({
 });
 
 function RouteComponent() {
-	const [lang, setLang] = useLocalStorage(
+	const [lang, setLang] = useLocalStorage<{ language: Language }>(
 		"lang",
 		{ language: "en" },
-		{ initializeWithValue: false },
+		{ initializeWithValue: true },
 	);
 	const navigate = useNavigate();
+	const t = useTranslations();
 	const form = useForm({
 		defaultValues: lang,
 		validators: {
 			onSubmit: languageSchema,
 		},
-		onSubmit: async ({ value }) => {
-			setLang(value);
+		onSubmit: async () => {
 			navigate({ to: "/app" });
 		},
 	});
-
-	const languages = [
-		{ value: "en", label: "English" },
-		{ value: "es", label: "Español" },
-		{ value: "fr", label: "Français" },
-		{ value: "de", label: "Deutsch" },
-		{ value: "zh", label: "中文" },
-		{ value: "ja", label: "日本語" },
-	] as const;
 
 	return (
 		<div className="flex min-h-screen items-center justify-center p-4">
@@ -62,12 +54,10 @@ function RouteComponent() {
 				<Logo className="size-24" />
 				<div className="space-y-3">
 					<h1 className="text-5xl font-semibold tracking-tight lg:text-6xl">
-						Break Language Barriers with Instant Chat
+						{t.index.title}
 					</h1>
 					<p className="text-lg text-muted-foreground lg:text-xl">
-						Chat naturally in any language. Our AI-powered translation lets you
-						connect with anyone, anywhere, instantly. Select your preferred
-						language to begin.
+						{t.index.description}
 					</p>
 				</div>
 				<form
@@ -84,15 +74,18 @@ function RouteComponent() {
 							return (
 								<Field orientation={"responsive"} data-invalid={isInvalid}>
 									<FieldLabel htmlFor={field.name}>
-										Choose your preferred language
+										{t.index.chooseLanguage}
 									</FieldLabel>
 									<Select
 										name={field.name}
 										value={field.state.value}
-										onValueChange={field.handleChange}
+										onValueChange={(e) => {
+											setLang({ language: e as Language });
+											field.handleChange(e as Language);
+										}}
 									>
 										<SelectTrigger id={field.name} aria-invalid={isInvalid}>
-											<SelectValue placeholder="English" />
+											<SelectValue placeholder={t.index.english} />
 										</SelectTrigger>
 										<SelectContent position="item-aligned">
 											{languages.map((lang) => (
@@ -103,8 +96,7 @@ function RouteComponent() {
 										</SelectContent>
 									</Select>
 									<FieldDescription>
-										This will be your default language for chatting and
-										translations
+										{t.index.languageDescription}
 									</FieldDescription>
 									{isInvalid && <FieldError errors={field.state.meta.errors} />}
 								</Field>
@@ -117,7 +109,7 @@ function RouteComponent() {
 						disabled={form.state.isSubmitting}
 						variant={"secondary"}
 					>
-						{form.state.isSubmitting ? <Spinner /> : "Get Started"}
+						{form.state.isSubmitting ? <Spinner /> : t.index.getStarted}
 					</Button>
 				</form>
 			</div>

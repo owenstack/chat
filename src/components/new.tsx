@@ -23,6 +23,7 @@ import {
 	FieldError,
 	FieldLabel,
 } from "@/components/ui/field";
+import { useTranslations } from "@/lib/content";
 import { getInitials } from "@/lib/helpers";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -54,17 +55,8 @@ import { Skeleton } from "./ui/skeleton";
 import { Spinner } from "./ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 
-const newChatSchema = z.object({
-	memberIds: z
-		.array(z.string())
-		.min(1, { message: "Select at least one user" }),
-	name: z
-		.string()
-		.min(2)
-		.max(100, { message: "Name must be between 2 and 100 characters" }),
-});
-
 export function NewChat({ showMessage = false }) {
+	const t = useTranslations();
 	const [open, setOpen] = useState(false);
 	const isDesktop = useMediaQuery("(min-width: 768px)", {
 		initializeWithValue: false,
@@ -76,20 +68,20 @@ export function NewChat({ showMessage = false }) {
 					<Button
 						variant="ghost"
 						size={showMessage ? "lg" : "icon"}
-						aria-label="New chat"
+						aria-label={t.app.newChatAria}
 						className={showMessage ? "gap-2 font-medium" : ""}
 					>
 						<SquarePen className="size-5" />
-						{showMessage && <span>New Chat</span>}
+						{showMessage && <span>{t.app.newChat}</span>}
 					</Button>
 				</DialogTrigger>
 				<DialogContent className="sm:max-w-[550px]">
 					<DialogHeader className="space-y-3 pb-2">
 						<DialogTitle className="text-2xl font-semibold tracking-tight">
-							Create New Conversation
+							{t.newChat.createNewConversation}
 						</DialogTitle>
 						<DialogDescription className="text-base text-muted-foreground leading-relaxed">
-							Choose who you'd like to chat with - individuals or groups
+							{t.newChat.chooseWhoToChat}
 						</DialogDescription>
 					</DialogHeader>
 					<div className="py-2">
@@ -98,7 +90,7 @@ export function NewChat({ showMessage = false }) {
 					<DialogFooter className="gap-2 pt-2">
 						<DialogClose asChild>
 							<Button variant="outline" className="font-medium">
-								Cancel
+								{t.common.cancel}
 							</Button>
 						</DialogClose>
 					</DialogFooter>
@@ -113,20 +105,20 @@ export function NewChat({ showMessage = false }) {
 				<Button
 					variant="ghost"
 					size={showMessage ? "lg" : "icon"}
-					aria-label="New chat"
+					aria-label={t.app.newChatAria}
 					className={showMessage ? "gap-2 font-medium" : ""}
 				>
 					<SquarePen className="size-5" />
-					{showMessage && <span>New Chat</span>}
+					{showMessage && <span>{t.app.newChat}</span>}
 				</Button>
 			</DrawerTrigger>
 			<DrawerContent className="px-4">
 				<DrawerHeader className="space-y-2.5 text-left pb-2">
 					<DrawerTitle className="text-2xl font-semibold tracking-tight">
-						Create New Conversation
+						{t.newChat.createNewConversation}
 					</DrawerTitle>
 					<DrawerDescription className="text-base text-muted-foreground leading-relaxed">
-						Choose who you'd like to chat with - individuals or groups
+						{t.newChat.chooseWhoToChat}
 					</DrawerDescription>
 				</DrawerHeader>
 				<div className="py-2">
@@ -134,11 +126,11 @@ export function NewChat({ showMessage = false }) {
 				</div>
 				<DrawerFooter className="gap-2 pt-4">
 					<Button type="submit" className="font-medium">
-						Create chat
+						{t.newChat.createChat}
 					</Button>
 					<DrawerClose asChild>
 						<Button variant="outline" className="font-medium">
-							Cancel
+							{t.common.cancel}
 						</Button>
 					</DrawerClose>
 				</DrawerFooter>
@@ -148,6 +140,7 @@ export function NewChat({ showMessage = false }) {
 }
 
 function NewChatContent() {
+	const t = useTranslations();
 	const [query, setQuery] = useDebounceValue("", 300, {
 		leading: true,
 	});
@@ -158,12 +151,13 @@ function NewChatContent() {
 	);
 	const mutationFn = useConvexMutation(api.room.createRoom);
 	const navigate = useNavigate();
-	const { ref, isIntersecting } = useIntersectionObserver({
-		threshold: 0.5,
+
+	const newChatSchema = z.object({
+		memberIds: z
+			.array(z.string())
+			.min(1, { message: t.newChat.selectAtLeastOneUser }),
+		name: z.string().min(2).max(100, { message: t.newChat.nameBetween2And100 }),
 	});
-	if (isIntersecting && status === "CanLoadMore" && !isLoading) {
-		loadMore(6);
-	}
 
 	const form = useForm({
 		defaultValues: { memberIds: [] as string[], name: "" },
@@ -177,7 +171,7 @@ function NewChatContent() {
 					memberIds: value.memberIds as Id<"users">[],
 				}),
 				{
-					loading: "Creating your conversation...",
+					loading: t.newChat.creatingConversation,
 					success: (res) => {
 						navigate({
 							to: "/app/$roomId",
@@ -192,6 +186,13 @@ function NewChatContent() {
 		},
 	});
 	const isGroup = form.state.values.memberIds.length > 1;
+
+	const { ref, isIntersecting } = useIntersectionObserver({
+		threshold: 0.5,
+	});
+	if (isIntersecting && status === "CanLoadMore" && !isLoading) {
+		loadMore(6);
+	}
 
 	return (
 		<form
@@ -211,7 +212,7 @@ function NewChatContent() {
 								htmlFor={field.name}
 								className="text-sm font-semibold"
 							>
-								Conversation Name
+								{t.newChat.conversationName}
 							</FieldLabel>
 							<InputGroup>
 								<InputGroupAddon align="inline-start">
@@ -228,13 +229,13 @@ function NewChatContent() {
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 									aria-invalid={isInvalid}
-									placeholder="e.g., Weekend Plans"
+									placeholder={t.newChat.conversationNamePlaceholder}
 									className="text-sm"
 									required
 								/>
 							</InputGroup>
 							<FieldDescription className="text-xs text-muted-foreground leading-relaxed">
-								Choose a memorable name for this conversation
+								{t.newChat.conversationNameDescription}
 							</FieldDescription>
 							{isInvalid && <FieldError errors={field.state.meta.errors} />}
 						</Field>
@@ -251,14 +252,14 @@ function NewChatContent() {
 								htmlFor={field.name}
 								className="text-sm font-semibold"
 							>
-								Add Participants
+								{t.newChat.addParticipants}
 							</FieldLabel>
 							<InputGroup>
 								<InputGroupAddon>
 									<Search className="size-4 text-muted-foreground" />
 								</InputGroupAddon>
 								<InputGroupInput
-									placeholder="Search users..."
+									placeholder={t.newChat.searchUsers}
 									value={query}
 									onChange={(e) => setQuery(e.target.value)}
 									className="text-sm"
@@ -307,7 +308,10 @@ function NewChatContent() {
 								<span className="font-semibold tabular-nums">
 									{field.state.value.length}
 								</span>{" "}
-								{field.state.value.length === 1 ? "user" : "users"} selected
+								{field.state.value.length === 1
+									? t.common.user
+									: t.common.users}{" "}
+								{t.common.selected}
 							</FieldDescription>
 							{isInvalid && <FieldError errors={field.state.meta.errors} />}
 						</Field>
@@ -319,7 +323,7 @@ function NewChatContent() {
 				variant={"secondary"}
 				disabled={form.state.isSubmitting}
 			>
-				{form.state.isSubmitting ? <Spinner /> : "Create Chat"}
+				{form.state.isSubmitting ? <Spinner /> : t.newChat.createChat}
 			</Button>
 		</form>
 	);
