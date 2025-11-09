@@ -1,4 +1,5 @@
 import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -53,6 +54,11 @@ type ChatMessageType = {
 };
 
 export const Route = createFileRoute("/app/$roomId")({
+	errorComponent: ({ error }) => {
+		useEffect(() => {
+			Sentry.captureException(error);
+		}, [error]);
+	},
 	component: RouteComponent,
 });
 

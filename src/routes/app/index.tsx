@@ -1,6 +1,8 @@
+import * as Sentry from "@sentry/tanstackstart-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { usePaginatedQuery } from "convex/react";
 import { MessageSquareX, UserRound, UsersRound } from "lucide-react";
+import { useEffect } from "react";
 import { useIntersectionObserver } from "usehooks-ts";
 import { NewChat } from "@/components/new";
 import {
@@ -18,6 +20,11 @@ import { formatTimeAgo } from "@/lib/helpers";
 import { api } from "../../../convex/_generated/api";
 
 export const Route = createFileRoute("/app/")({
+	errorComponent: ({ error }) => {
+		useEffect(() => {
+			Sentry.captureException(error);
+		}, [error]);
+	},
 	component: RouteComponent,
 });
 

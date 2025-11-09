@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/tanstackstart-react";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import {
 	ErrorComponent,
@@ -9,15 +10,13 @@ import {
 import { useTranslations } from "@/lib/content";
 import { Button, buttonVariants } from "./ui/button";
 
-export function ErrorBoundary({ error }: ErrorComponentProps) {
+export function ErrorBoundaryComponent({ error }: ErrorComponentProps) {
 	const router = useRouter();
 	const isRoot = useMatch({
 		strict: false,
 		select: (state) => state.id === rootRouteId,
 	});
 	const t = useTranslations();
-
-	console.error(error);
 
 	return (
 		<div className="min-w-0 flex-1 p-4 flex flex-col items-center justify-center gap-6">
@@ -50,3 +49,12 @@ export function ErrorBoundary({ error }: ErrorComponentProps) {
 		</div>
 	);
 }
+
+export const ErrorBoundary = Sentry.withErrorBoundary(ErrorBoundaryComponent, {
+	fallback: (
+		<p className="text-destructive font-semibold text-3xl">
+			Internal Server Error
+		</p>
+	),
+	showDialog: false,
+});

@@ -1,8 +1,15 @@
+import * as Sentry from "@sentry/tanstackstart-react";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { AuthCheck } from "@/components/auth";
 import { Header } from "@/components/header";
 
 export const Route = createFileRoute("/app")({
+	errorComponent: ({ error }) => {
+		useEffect(() => {
+			Sentry.captureException(error);
+		}, [error]);
+	},
 	component: RouteComponent,
 });
 

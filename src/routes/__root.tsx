@@ -1,5 +1,6 @@
 import { Auth0Provider } from "@auth0/auth0-react";
 import type { ConvexQueryClient } from "@convex-dev/react-query";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
@@ -12,6 +13,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithAuth0 } from "convex/react-auth0";
+import { useEffect } from "react";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { NotFound } from "@/components/not-found";
@@ -52,6 +54,9 @@ export const Route = createRootRouteWithContext<{
 
 	component: RootComponent,
 	errorComponent: (props) => {
+		useEffect(() => {
+			Sentry.captureException(props.error);
+		}, [props.error]);
 		return (
 			<RootDocument>
 				<ErrorBoundary {...props} />

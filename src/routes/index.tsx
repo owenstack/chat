@@ -1,5 +1,7 @@
+import * as Sentry from "@sentry/tanstackstart-react";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useLocalStorage } from "usehooks-ts";
 import { z } from "zod";
 import { Logo } from "@/components/logo";
@@ -22,6 +24,11 @@ import { type Language, languages, useTranslations } from "@/lib/content";
 
 export const Route = createFileRoute("/")({
 	component: RouteComponent,
+	errorComponent: ({ error }) => {
+		useEffect(() => {
+			Sentry.captureException(error);
+		}, [error]);
+	},
 });
 
 const languageSchema = z.object({
