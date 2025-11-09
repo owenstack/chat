@@ -1,5 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
+import type { Doc, Id } from "./_generated/dataModel";
 import { protectedMutation, protectedQuery } from "./functions";
 
 export const getRooms = protectedQuery({
@@ -53,5 +54,33 @@ export const createRoom = protectedMutation({
 		);
 
 		return roomId;
+	},
+});
+
+export const getRoomMembers = protectedQuery({
+	args: { roomId: v.id("rooms") },
+	handler: async (ctx, args) => {
+		const userRooms = await ctx.db
+			.query("user_rooms")
+			.withIndex("by_room", (q) => q.eq("roomId", args.roomId))
+			.collect();
+
+		const users = await Promise.all(
+			userRooms.map(async (ur) => {
+				const user = await ctx.db.get(ur.userId);
+				return {
+					_id: user?._id,
+					name: user?.name,
+					avatar: user?.avatar,
+				};
+			}),
+		);
+		return users.reduce(
+			(acc, user) => {
+				if (user._id) acc[user._id] = user;
+				return acc;
+			},
+			{} as Record<Id<"users">, Partial<Doc<"users">>>,
+		);
 	},
 });

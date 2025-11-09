@@ -96,7 +96,7 @@ export const getMessages = protectedQuery({
 		const messages = await ctx.db
 			.query("messages")
 			.withIndex("by_room", (q) => q.eq("roomId", args.roomId))
-			.order("asc")
+			.order("desc")
 			.paginate(args.paginationOpts);
 		const data = await Promise.all(
 			messages.page.map(async (message) => {
@@ -113,7 +113,8 @@ export const getMessages = protectedQuery({
 					if (userMessage) {
 						return {
 							...rest,
-							originalText: userMessage.translatedText,
+							displayText: userMessage.translatedText,
+							originalText: rest.originalText,
 							isUserMessage,
 						};
 					}
@@ -121,6 +122,7 @@ export const getMessages = protectedQuery({
 
 				return {
 					...rest,
+					displayText: rest.originalText,
 					isUserMessage,
 				};
 			}),
@@ -150,49 +152,59 @@ export const getAITranslation = action({
 		messageId: v.id("messages"),
 	},
 	handler: async (ctx, args) => {
-		const cached = await ctx.runQuery(internal.chat.getTranslationFromCache, {
-			sourceText: args.message,
-			targetLanguage: args.targetLanguage,
-		});
-
-		let translatedText: string;
-
-		if (cached) {
-			translatedText = cached.translatedText;
-		} else {
-			let prompt = `Translate from ${args.sourceLanguage} to ${args.targetLanguage}: ${args.message}`;
-
-			if (args.previousMessages && args.previousMessages.length > 0) {
-				const history = args.previousMessages
-					.map(
-						(msg) =>
-							`${msg.byUser ? "User" : "Other"}: ${msg.message} (${msg.sourceLanguage})`,
-					)
-					.join("\n");
-				prompt = `Conversation History:\n${history}\n\nTranslate the last message from ${args.sourceLanguage} to ${args.targetLanguage}: ${args.message}`;
-			}
-
-			const { object } = await generateObject({
-				model: "minimax/minimax-m2",
-				system,
-				prompt,
-				schema: messageSchema,
-			});
-
-			translatedText = object.message;
-			await ctx.runMutation(internal.chat.storeTranslation, {
+		try {
+			const cached = await ctx.runQuery(internal.chat.getTranslationFromCache, {
 				sourceText: args.message,
 				targetLanguage: args.targetLanguage,
+			});
+
+			let translatedText: string;
+
+			if (cached) {
+				translatedText = cached.translatedText;
+			} else {
+				let prompt = `Translate from ${args.sourceLanguage} to ${args.targetLanguage}: ${args.message}`;
+
+				if (args.previousMessages && args.previousMessages.length > 0) {
+					const history = args.previousMessages
+						.map(
+							(msg) =>
+								`${msg.byUser ? "User" : "Other"}: ${msg.message} (${msg.sourceLanguage})`,
+						)
+						.join("\n");
+					prompt = `Conversation History:\n${history}\n\nTranslate the last message from ${args.sourceLanguage} to ${args.targetLanguage}: ${args.message}`;
+				}
+
+				const { object } = await generateObject({
+					model: "minimax/minimax-m2",
+					system,
+					prompt,
+					schema: messageSchema,
+				});
+
+				translatedText = object.message;
+				await ctx.runMutation(internal.chat.storeTranslation, {
+					sourceText: args.message,
+					targetLanguage: args.targetLanguage,
+					translatedText: translatedText,
+				});
+			}
+
+			await ctx.runMutation(internal.chat.deliverTranslation, {
+				messageId: args.messageId,
+				userIds: args.userIds,
 				translatedText: translatedText,
+				targetLanguage: args.targetLanguage,
+			});
+		} catch (error) {
+			console.error("AI Translation failed:", error);
+			await ctx.runMutation(internal.chat.deliverTranslation, {
+				messageId: args.messageId,
+				userIds: args.userIds,
+				translatedText: "[Translation Failed]",
+				targetLanguage: args.targetLanguage,
 			});
 		}
-
-		await ctx.runMutation(internal.chat.deliverTranslation, {
-			messageId: args.messageId,
-			userIds: args.userIds,
-			translatedText: translatedText,
-			targetLanguage: args.targetLanguage,
-		});
 	},
 });
 

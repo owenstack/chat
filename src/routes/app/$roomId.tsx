@@ -37,8 +37,8 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-
 import { formatTimeAgo } from "@/lib/helpers";
+import { useMounted } from "@/lib/hooks";
 import { useSendMessage } from "@/lib/mutations";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -48,6 +48,7 @@ type ChatMessageType = {
 	authorId: Id<"users">;
 	roomId: Id<"rooms">;
 	originalText: string;
+	displayText: string;
 	sourceLanguage: string;
 	createdAt: number;
 	status: "sending" | "sent" | "delivered" | "failed";
@@ -65,8 +66,13 @@ function RouteComponent() {
 		{ roomId: roomId as Id<"rooms"> },
 		{ initialNumItems: 10 },
 	);
+	const mounted = useMounted();
 	const { ref, isIntersecting } = useIntersectionObserver({
 		threshold: 0.5,
+	});
+	const { data: members } = useQuery({
+		...convexQuery(api.room.getRoomMembers, { roomId: roomId as Id<"rooms"> }),
+		staleTime: Infinity,
 	});
 
 	if (isIntersecting && status === "CanLoadMore" && !isLoading) {
@@ -82,7 +88,7 @@ function RouteComponent() {
 							<Spinner />
 						</div>
 					)}
-					{isLoading ? (
+					{isLoading || !mounted ? (
 						<ConversationEmptyState
 							title="Loading..."
 							description="Please wait while we fetch your messages"
@@ -96,14 +102,17 @@ function RouteComponent() {
 						/>
 					) : (
 						<div className="space-y-4">
-							{results.map((message: ChatMessageType, index: number) => (
-								<ChatMessage
-									key={message._id}
-									message={message}
-									forwardRef={ref}
-									isLast={index === results.length - 1}
-								/>
-							))}
+							{[...results]
+								.reverse()
+								.map((message: ChatMessageType, index: number) => (
+									<ChatMessage
+										key={message._id}
+										message={message}
+										forwardRef={ref}
+										isFirst={index === 0}
+										members={members}
+									/>
+								))}
 						</div>
 					)}
 					<ConversationScrollButton />
@@ -119,25 +128,49 @@ function RouteComponent() {
 function ChatMessage({
 	message,
 	forwardRef,
-	isLast,
+	isFirst,
+	members,
 }: {
 	message: ChatMessageType;
 	forwardRef: React.Ref<HTMLDivElement>;
-	isLast: boolean;
+	isFirst: boolean;
+	members:
+		| Record<
+				Id<"users">,
+				Partial<{
+					_id: Id<"users">;
+					_creationTime: number;
+					name: string;
+					tokenIdentifier: string;
+					selectedLanguage: string;
+					avatar: string;
+				}>
+		  >
+		| undefined;
 }) {
-	const { data } = useQuery({
-		...convexQuery(api.user.getUserPublicDetails, {
-			userId: message.authorId as Id<"users">,
-		}),
-		staleTime: Infinity,
-	});
+	const authorDetails = members?.[message.authorId];
 
 	return (
-		<div ref={isLast ? forwardRef : null}>
+		<div ref={isFirst ? forwardRef : null}>
 			<Message from={message.isUserMessage ? "user" : "assistant"}>
-				<MessageAvatar src={data?.avatar ?? ""} name={data?.name ?? ""} />
+				<MessageAvatar
+					src={authorDetails?.avatar ?? ""}
+					name={authorDetails?.name}
+				/>
 				<div className="flex flex-col gap-2">
-					<MessageContent>{message.originalText}</MessageContent>
+					{!message.isUserMessage ||
+					message.displayText !== message.originalText ? (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<MessageContent>{message.displayText}</MessageContent>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p className="text-sm">Original: {message.originalText}</p>
+							</TooltipContent>
+						</Tooltip>
+					) : (
+						<MessageContent>{message.displayText}</MessageContent>
+					)}
 					<div className="flex items-center gap-2 text-[11px] text-muted-foreground/70">
 						<span className="flex items-center gap-1">
 							<Badge

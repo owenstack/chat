@@ -62,25 +62,10 @@ export const getPublicUsers = protectedQuery({
 
 		const data = results.page
 			.filter((user) => user.tokenIdentifier !== ctx.user.tokenIdentifier)
-			.map(({ tokenIdentifier, ...rest }) => rest);
+			.map(({ tokenIdentifier, _creationTime, ...rest }) => rest);
 		return {
 			...results,
 			page: data,
 		};
-	},
-});
-
-export const getUserPublicDetails = protectedQuery({
-	args: {
-		userId: v.id("users"),
-	},
-	handler: async (ctx, args) => {
-		return await ctx.db.get(args.userId).then((user) => {
-			return {
-				avatar: user?.avatar,
-				name: user?.name,
-				selectedLanguage: user?.selectedLanguage,
-			};
-		});
 	},
 });

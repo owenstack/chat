@@ -66,7 +66,9 @@ const newChatSchema = z.object({
 
 export function NewChat({ showMessage = false }) {
 	const [open, setOpen] = useState(false);
-	const isDesktop = useMediaQuery("(min-width: 768px)");
+	const isDesktop = useMediaQuery("(min-width: 768px)", {
+		initializeWithValue: false,
+	});
 	if (isDesktop) {
 		return (
 			<Dialog open={open} onOpenChange={setOpen}>
