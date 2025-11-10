@@ -2,6 +2,8 @@
 
 A real-time chat application with instant language translation, built with TanStack Router and Convex.
 
+**Live at:** <https://chat.efobi.dev>
+
 ## Features
 
 - **Real-time messaging** with instant delivery
@@ -42,7 +44,8 @@ bun run test
 - **Styling**: Tailwind CSS
 - **Authentication**: Auth0
 - **Language Translation**: AI-powered translation
-- **Deployment**: Cloudflare Pages
+- **Deployment**: Cloudflare Workers
+- **Error Monitoring**: Sentry
 
 ## Architecture
 
@@ -50,7 +53,7 @@ This project uses [TanStack Router](https://tanstack.com/router) with a file-bas
 
 ## Deployment
 
-This application is configured for deployment on Cloudflare Pages with Convex backend.
+This application is configured for deployment on Cloudflare Workers with Convex backend.
 
 ```bash
 bun run deploy

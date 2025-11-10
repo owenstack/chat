@@ -13,10 +13,12 @@ import {
 	X,
 } from "lucide-react";
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import { useStickToBottom } from "use-stick-to-bottom";
 import { useLocalStorage } from "usehooks-ts";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ConversationEmptyState } from "@/components/ui/conversation";
 import {
 	InputGroup,
@@ -40,7 +42,8 @@ import { formatTimeAgo } from "@/lib/helpers";
 import { useSendMessage } from "@/lib/mutations";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
+import { usePresence } from "@/lib/hooks/use-presence";
+import { useMe } from "@/lib/hooks";
 
 type ChatMessageType = {
 	_id: Id<"messages">;
@@ -86,16 +89,14 @@ function RouteComponent() {
 		...convexQuery(api.room.getRoomMembers, { roomId: roomId as Id<"rooms"> }),
 		staleTime: Infinity,
 	});
-
-	const parentRef = useRef<HTMLDivElement>(null);
 	const messages = useMemo(() => [...results].reverse(), [results]);
 	const count = messages.length;
-	const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-	const prevCountRef = useRef(0);
+	const { isAtBottom, scrollToBottom, scrollRef } = useStickToBottom();
+	const hasInitialized = useRef(false);
 
 	const virtualizer = useVirtualizer({
 		count,
-		getScrollElement: () => parentRef.current,
+		getScrollElement: () => scrollRef.current,
 		estimateSize: () => 100,
 		overscan: 5,
 	});
@@ -107,58 +108,28 @@ function RouteComponent() {
 		const [firstItem] = virtualItems;
 		if (!firstItem) return;
 
-		// Only trigger load more if we've already scrolled to bottom initially
-		if (
-			firstItem.index === 0 &&
-			status === "CanLoadMore" &&
-			!isLoading &&
-			hasScrolledToBottom
-		) {
+		if (firstItem.index === 0 && status === "CanLoadMore" && !isLoading) {
 			loadMore(10);
 		}
-	}, [virtualItems, status, isLoading, loadMore, hasScrolledToBottom]);
+	}, [virtualItems, status, isLoading, loadMore]);
 
-	// Scroll to bottom on initial load or when new messages arrive
+	// Initial scroll to bottom when messages first load
 	useEffect(() => {
-		if (count === 0) return;
+		if (count === 0 || hasInitialized.current) return;
+		hasInitialized.current = true;
+		scrollToBottom();
+	}, [count, scrollToBottom]);
 
-		// Initial scroll to bottom
-		if (!hasScrolledToBottom && !isLoading) {
-			// Use setTimeout to ensure elements are measured
-			setTimeout(() => {
-				virtualizer.scrollToIndex(count - 1, {
-					align: "end",
-					behavior: "auto",
-				});
-				setHasScrolledToBottom(true);
-			}, 100);
-		}
-		// Scroll to bottom when new messages are added (not when loading older messages)
-		else if (count > prevCountRef.current && hasScrolledToBottom) {
-			// Only scroll if we added messages (not loaded older ones)
-			// Check if user is near bottom before auto-scrolling
-			const scrollElement = parentRef.current;
-			if (scrollElement) {
-				const { scrollTop, scrollHeight, clientHeight } = scrollElement;
-				const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
+	// Scroll to bottom when new messages arrive and user is at bottom
+	useEffect(() => {
+		if (count === 0 || !isAtBottom) return;
 
-				if (isNearBottom) {
-					setTimeout(() => {
-						virtualizer.scrollToIndex(count - 1, {
-							align: "end",
-							behavior: "smooth",
-						});
-					}, 50);
-				}
-			}
-		}
-
-		prevCountRef.current = count;
-	}, [count, isLoading, virtualizer, hasScrolledToBottom]);
+		scrollToBottom();
+	}, [count, isAtBottom, scrollToBottom]);
 
 	return (
 		<div className="flex flex-col h-full">
-			<div ref={parentRef} className="flex-1 overflow-y-auto pb-24">
+			<div ref={scrollRef} className="flex-1 overflow-y-auto pb-24">
 				{isLoading && count === 0 ? (
 					<ConversationEmptyState
 						title={t.common.loading}
@@ -207,17 +178,7 @@ function RouteComponent() {
 				)}
 			</div>
 			<div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-				<ChatInput
-					onMessageSent={() => {
-						// Scroll to bottom after sending message
-						setTimeout(() => {
-							virtualizer.scrollToIndex(count, {
-								align: "end",
-								behavior: "smooth",
-							});
-						}, 50);
-					}}
-				/>
+				<ChatInput />
 			</div>
 		</div>
 	);
@@ -243,6 +204,12 @@ function ChatMessage({
 		| undefined;
 }) {
 	const t = useTranslations();
+	const me = useMe();
+	const [myPresence, othersPresence, updatePresence] = usePresence(
+		message.roomId,
+		me?._id as Id<"users">,
+		{},
+	);
 	const authorDetails = members?.[message.authorId];
 
 	return (
@@ -298,7 +265,7 @@ function ChatMessage({
 	);
 }
 
-function ChatInput({ onMessageSent }: { onMessageSent: () => void }) {
+function ChatInput() {
 	const t = useTranslations();
 	const { roomId } = Route.useParams();
 	const { mutate, isPending, error } = useSendMessage();
@@ -312,18 +279,11 @@ function ChatInput({ onMessageSent }: { onMessageSent: () => void }) {
 		const formData = new FormData(e.currentTarget);
 		const message = formData.get("message") as string;
 		if (!message.trim()) return;
-		mutate(
-			{
-				roomId: roomId as Id<"rooms">,
-				sourceLanguage: lang.language,
-				message: message.trim(),
-			},
-			{
-				onSuccess: () => {
-					onMessageSent();
-				},
-			},
-		);
+		mutate({
+			roomId: roomId as Id<"rooms">,
+			sourceLanguage: lang.language,
+			message: message.trim(),
+		});
 		e.currentTarget.reset();
 	};
 	if (error) {

@@ -8,7 +8,7 @@ export default defineSchema({
 		name: v.string(),
 		tokenIdentifier: v.string(), // For authentication
 		selectedLanguage: v.string(), // e.g., "en", "es", "ja"
-		// accountType: v.union(v.literal('public'), v.literal('private'))
+		accountType: v.optional(v.union(v.literal("public"), v.literal("private"))),
 		avatar: v.string(),
 	})
 		.index("by_token", ["tokenIdentifier"])

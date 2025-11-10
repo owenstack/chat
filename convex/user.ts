@@ -41,6 +41,7 @@ export const setUpUser = mutation({
 			tokenIdentifier: identity.tokenIdentifier,
 			selectedLanguage: args.selectedLanguage,
 			avatar: identity.pictureUrl ?? "/logo.png",
+			accountType: "public",
 		});
 	},
 });

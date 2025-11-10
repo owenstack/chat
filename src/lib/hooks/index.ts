@@ -1,9 +1,9 @@
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { useLocalStorage } from "usehooks-ts";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
-import type { Language } from "./content";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
+import type { Language } from "../content";
 
 export function useMe() {
 	return useQuery(api.user.getMe, {});

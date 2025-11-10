@@ -1,8 +1,9 @@
+import { ActionRetrier } from "@convex-dev/action-retrier";
 import { generateObject } from "ai";
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { z } from "zod";
-import { api, internal } from "./_generated/api";
+import { api, components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalMutation, internalQuery } from "./_generated/server";
 import { protectedMutation, protectedQuery } from "./functions";
@@ -16,6 +17,8 @@ const messageSchema = z.object({
 		.string()
 		.describe("The language code of the translation (e.g., 'en', 'es', 'fr')"),
 });
+
+const retrier = new ActionRetrier(components.actionRetrier);
 
 export const sendMessage = protectedMutation({
 	args: {
@@ -66,18 +69,14 @@ export const sendMessage = protectedMutation({
 
 		await Promise.all(
 			Object.entries(usersByLanguage).map(async ([language, userIds]) => {
-				await ctx.scheduler.runAt(
-					Date.now() - 1000,
-					api.chat.getAITranslation,
-					{
-						message: args.message,
-						sourceLanguage: args.sourceLanguage,
-						targetLanguage: language,
-						userIds: userIds as Id<"users">[],
-						messageId: messageId,
-						previousMessages,
-					},
-				);
+				await retrier.runAt(ctx, Date.now() - 1000, api.chat.getAITranslation, {
+					message: args.message,
+					sourceLanguage: args.sourceLanguage,
+					targetLanguage: language,
+					userIds: userIds as Id<"users">[],
+					messageId: messageId,
+					previousMessages,
+				});
 			}),
 		);
 		await ctx.db.patch(args.roomId, {
@@ -152,59 +151,49 @@ export const getAITranslation = action({
 		messageId: v.id("messages"),
 	},
 	handler: async (ctx, args) => {
-		try {
-			const cached = await ctx.runQuery(internal.chat.getTranslationFromCache, {
-				sourceText: args.message,
-				targetLanguage: args.targetLanguage,
-			});
+		const cached = await ctx.runQuery(internal.chat.getTranslationFromCache, {
+			sourceText: args.message,
+			targetLanguage: args.targetLanguage,
+		});
 
-			let translatedText: string;
+		let translatedText: string;
 
-			if (cached) {
-				translatedText = cached.translatedText;
-			} else {
-				let prompt = `Translate from ${args.sourceLanguage} to ${args.targetLanguage}: ${args.message}`;
+		if (cached) {
+			translatedText = cached.translatedText;
+		} else {
+			let prompt = `Translate from ${args.sourceLanguage} to ${args.targetLanguage}: ${args.message}`;
 
-				if (args.previousMessages && args.previousMessages.length > 0) {
-					const history = args.previousMessages
-						.map(
-							(msg) =>
-								`${msg.byUser ? "User" : "Other"}: ${msg.message} (${msg.sourceLanguage})`,
-						)
-						.join("\n");
-					prompt = `Conversation History:\n${history}\n\nTranslate the last message from ${args.sourceLanguage} to ${args.targetLanguage}: ${args.message}`;
-				}
-
-				const { object } = await generateObject({
-					model: "minimax/minimax-m2",
-					system,
-					prompt,
-					schema: messageSchema,
-				});
-
-				translatedText = object.message;
-				await ctx.runMutation(internal.chat.storeTranslation, {
-					sourceText: args.message,
-					targetLanguage: args.targetLanguage,
-					translatedText: translatedText,
-				});
+			if (args.previousMessages && args.previousMessages.length > 0) {
+				const history = args.previousMessages
+					.map(
+						(msg) =>
+							`${msg.byUser ? "User" : "Other"}: ${msg.message} (${msg.sourceLanguage})`,
+					)
+					.join("\n");
+				prompt = `Conversation History:\n${history}\n\nTranslate the last message from ${args.sourceLanguage} to ${args.targetLanguage}: ${args.message}`;
 			}
 
-			await ctx.runMutation(internal.chat.deliverTranslation, {
-				messageId: args.messageId,
-				userIds: args.userIds,
-				translatedText: translatedText,
-				targetLanguage: args.targetLanguage,
+			const { object } = await generateObject({
+				model: "minimax/minimax-m2",
+				system,
+				prompt,
+				schema: messageSchema,
 			});
-		} catch (error) {
-			console.error("AI Translation failed:", error);
-			await ctx.runMutation(internal.chat.deliverTranslation, {
-				messageId: args.messageId,
-				userIds: args.userIds,
-				translatedText: "[Translation Failed]",
+
+			translatedText = object.message;
+			await ctx.runMutation(internal.chat.storeTranslation, {
+				sourceText: args.message,
 				targetLanguage: args.targetLanguage,
+				translatedText: translatedText,
 			});
 		}
+
+		await ctx.runMutation(internal.chat.deliverTranslation, {
+			messageId: args.messageId,
+			userIds: args.userIds,
+			translatedText: translatedText,
+			targetLanguage: args.targetLanguage,
+		});
 	},
 });
 

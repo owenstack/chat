@@ -5,6 +5,7 @@ import { MessageSquareX, UserRound, UsersRound } from "lucide-react";
 import { useEffect } from "react";
 import { useIntersectionObserver } from "usehooks-ts";
 import { NewChat } from "@/components/new";
+import { Button } from "@/components/ui/button";
 import {
 	Empty,
 	EmptyContent,
@@ -18,7 +19,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { useTranslations } from "@/lib/content";
 import { formatTimeAgo } from "@/lib/helpers";
 import { api } from "../../../convex/_generated/api";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/app/")({
 	errorComponent: ({ error }) => {
