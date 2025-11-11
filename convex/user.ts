@@ -34,6 +34,10 @@ export const setUpUser = mutation({
 					selectedLanguage: args.selectedLanguage,
 				});
 			}
+			// to sync already created accounts
+			if (!user.accountType) {
+				await ctx.db.patch(user._id, { accountType: "public" });
+			}
 			return user._id;
 		}
 		return await ctx.db.insert("users", {
@@ -52,15 +56,34 @@ export const getPublicUsers = protectedQuery({
 		query: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
-		const results = args.query
-			? await ctx.db
-					.query("users")
-					.withSearchIndex("name_search", (q) =>
-						q.search("name", args.query ?? ""),
-					)
-					.paginate(args.paginationOpts)
-			: await ctx.db.query("users").paginate(args.paginationOpts);
+		const publicUsersQuery = ctx.db
+			.query("users")
+			.withIndex("by_type", (q) => q.eq("accountType", "public"));
 
+		if (args.query) {
+			const searchQuery = args.query;
+			const allPublicUsers = await publicUsersQuery.collect();
+			const searchResults = await ctx.db
+				.query("users")
+				.withSearchIndex("public_name_search", (q) =>
+					q.search("name", searchQuery),
+				)
+				.paginate(args.paginationOpts);
+
+			const matchingIds = new Set(searchResults.page.map((u) => u._id));
+			const filtered = allPublicUsers.filter((u) => matchingIds.has(u._id));
+
+			const data = filtered
+				.filter((user) => user.tokenIdentifier !== ctx.user.tokenIdentifier)
+				.map(({ tokenIdentifier, _creationTime, ...rest }) => rest);
+
+			return {
+				...searchResults,
+				page: data,
+			};
+		}
+
+		const results = await publicUsersQuery.paginate(args.paginationOpts);
 		const data = results.page
 			.filter((user) => user.tokenIdentifier !== ctx.user.tokenIdentifier)
 			.map(({ tokenIdentifier, _creationTime, ...rest }) => rest);

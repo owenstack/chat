@@ -12,7 +12,11 @@ export default defineSchema({
 		avatar: v.string(),
 	})
 		.index("by_token", ["tokenIdentifier"])
-		.searchIndex("name_search", { searchField: "name" }),
+		.index("by_type", ["accountType"])
+		.searchIndex("public_name_search", {
+			searchField: "name",
+			filterFields: ["accountType"],
+		}),
 
 	// Defines a chat room
 	rooms: defineTable({

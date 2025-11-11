@@ -10,8 +10,6 @@ export const heartbeat = protectedMutation({
 	args: {
 		roomId: v.id("rooms"),
 		interval: v.number(),
-		userId: v.id("users"),
-		sessionId: v.string(),
 	},
 	handler: async (ctx, args) => {
 		return await presence.heartbeat(
@@ -30,6 +28,23 @@ export const list = protectedQuery({
 	},
 	handler: async (ctx, args) => {
 		return await presence.list(ctx, args.roomToken);
+	},
+});
+
+export const update = protectedMutation({
+	args: {
+		roomId: v.id("rooms"),
+		data: v.object({
+			typing: v.boolean(),
+		}),
+	},
+	handler: async (ctx, args) => {
+		return await presence.updateRoomUser(
+			ctx,
+			args.roomId,
+			ctx.user._id,
+			args.data,
+		);
 	},
 });
 

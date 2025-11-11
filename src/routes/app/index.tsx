@@ -1,9 +1,9 @@
 import * as Sentry from "@sentry/tanstackstart-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { usePaginatedQuery } from "convex/react";
 import { MessageSquareX, UserRound, UsersRound } from "lucide-react";
-import { useEffect } from "react";
-import { useIntersectionObserver } from "usehooks-ts";
+import { useEffect, useRef } from "react";
 import { NewChat } from "@/components/new";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,17 +48,41 @@ function RouteComponent() {
 		{},
 		{ initialNumItems: 10 },
 	);
-	const { ref, isIntersecting } = useIntersectionObserver({
-		threshold: 0.5,
+	const parentRef = useRef<HTMLDivElement>(null);
+
+	const virtualizer = useVirtualizer({
+		count: results.length,
+		getScrollElement: () => parentRef.current,
+		estimateSize: () => 68,
+		overscan: 10,
+		rangeExtractor: (range) => {
+			const start = Math.max(0, range.startIndex - 1);
+			const end = Math.min(results.length, range.endIndex + 1);
+			return Array.from({ length: end - start }, (_, i) => start + i);
+		},
 	});
 
-	if (isIntersecting && status === "CanLoadMore" && !isLoading) {
+	useEffect(() => {
+		const lastItem = virtualizer.getVirtualItems().at(-1);
+		if (
+			!lastItem ||
+			lastItem.index < results.length - 1 ||
+			status !== "CanLoadMore" ||
+			isLoading
+		)
+			return;
 		loadMore(10);
-	}
+	}, [virtualizer, results.length, status, isLoading, loadMore]);
 
 	return (
 		<div className="flex flex-col h-full">
-			<div className="flex-1 overflow-y-auto">
+			<div
+				ref={parentRef}
+				className="flex-1 overflow-y-auto"
+				style={{
+					contain: "layout style paint",
+				}}
+			>
 				<div className="max-w-2xl mx-auto">
 					{isLoading &&
 						new Array(6).fill(0).map((_, index) => (
@@ -67,20 +91,38 @@ function RouteComponent() {
 						))}
 					{!isLoading && results.length === 0 && <ChatEmpty />}
 					{results.length > 0 && (
-						<div className="divide-y">
-							{results.map(({ _id, type, name, lastActivityAt }, index) => (
-								<div
-									key={_id}
-									ref={index === results.length - 1 ? ref : undefined}
-								>
-									<ChatPreview
-										_id={_id}
-										type={type}
-										name={name}
-										lastActivityAt={lastActivityAt}
-									/>
-								</div>
-							))}
+						<div
+							style={{
+								height: `${virtualizer.getTotalSize()}px`,
+								width: "100%",
+								position: "relative",
+							}}
+						>
+							<div
+								style={{
+									transform: `translateY(${virtualizer.getVirtualItems()[0]?.start ?? 0}px)`,
+								}}
+							>
+								{virtualizer.getVirtualItems().map((virtualItem) => (
+									<div
+										key={virtualItem.key}
+										data-index={virtualItem.index}
+										className="divide-y"
+									>
+										{(() => {
+											const item = results[virtualItem.index];
+											return (
+												<ChatPreview
+													_id={item._id}
+													type={item.type}
+													name={item.name}
+													lastActivityAt={item.lastActivityAt}
+												/>
+											);
+										})()}
+									</div>
+								))}
+							</div>
 						</div>
 					)}
 					{status === "LoadingMore" && (

@@ -1,6 +1,6 @@
 import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
 import * as Sentry from "@sentry/tanstackstart-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
@@ -13,7 +13,7 @@ import {
 	X,
 } from "lucide-react";
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { useLocalStorage } from "usehooks-ts";
@@ -31,6 +31,7 @@ import {
 	MessageAvatar,
 	MessageContent,
 } from "@/components/ui/message";
+import { PresenceAvatars, TypingIndicator } from "@/components/ui/presence";
 import { Spinner } from "@/components/ui/spinner";
 import {
 	Tooltip,
@@ -39,11 +40,11 @@ import {
 } from "@/components/ui/tooltip";
 import { type Language, useTranslations } from "@/lib/content";
 import { formatTimeAgo } from "@/lib/helpers";
+import { useRoomPresence } from "@/lib/hooks/use-room-presence";
+import useTypingIndicator from "@/lib/hooks/use-typing-indicator";
 import { useSendMessage } from "@/lib/mutations";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { usePresence } from "@/lib/hooks/use-presence";
-import { useMe } from "@/lib/hooks";
 
 type ChatMessageType = {
 	_id: Id<"messages">;
@@ -85,8 +86,13 @@ function RouteComponent() {
 		{ roomId: roomId as Id<"rooms"> },
 		{ initialNumItems: 10 },
 	);
+	const { others, updatePresence } = useRoomPresence(roomId as Id<"rooms">);
 	const { data: members } = useQuery({
 		...convexQuery(api.room.getRoomMembers, { roomId: roomId as Id<"rooms"> }),
+		staleTime: Infinity,
+	});
+	const { data: room } = useSuspenseQuery({
+		...convexQuery(api.room.getRoom, { roomId: roomId as Id<"rooms"> }),
 		staleTime: Infinity,
 	});
 	const messages = useMemo(() => [...results].reverse(), [results]);
@@ -100,6 +106,17 @@ function RouteComponent() {
 		estimateSize: () => 100,
 		overscan: 5,
 	});
+
+	const typingUsers = useMemo(
+		() =>
+			others
+				?.filter((p) => {
+					const data = p.data as Record<string, unknown>;
+					return data?.typing === true;
+				})
+				.map((p) => members?.[p.userId as Id<"users">]?.name || "Someone"),
+		[others, members],
+	);
 
 	const virtualItems = virtualizer.getVirtualItems();
 
@@ -127,8 +144,29 @@ function RouteComponent() {
 		scrollToBottom();
 	}, [count, isAtBottom, scrollToBottom]);
 
+	const presenceWithUserData = useMemo(
+		() =>
+			others?.map((p) => {
+				const member = members?.[p.userId as Id<"users">];
+				return {
+					userId: p.userId,
+					name: member?.name,
+					avatar: member?.avatar,
+					online: p.online,
+					lastSeen: p.lastDisconnected,
+				};
+			}) ?? [],
+		[others, members],
+	);
+
 	return (
 		<div className="flex flex-col h-full">
+			<div className="border-b bg-background px-4 py-2 fixed z-20 top-14 left-0 right-0">
+				<div className="flex items-center justify-between">
+					<h2 className="font-semibold truncate max-w-sm">{room.name}</h2>
+					<PresenceAvatars users={presenceWithUserData} maxDisplay={5} />
+				</div>
+			</div>
 			<div ref={scrollRef} className="flex-1 overflow-y-auto pb-24">
 				{isLoading && count === 0 ? (
 					<ConversationEmptyState
@@ -178,7 +216,8 @@ function RouteComponent() {
 				)}
 			</div>
 			<div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-				<ChatInput />
+				<TypingIndicator names={typingUsers} />
+				<ChatInput onTypingChange={updatePresence} />
 			</div>
 		</div>
 	);
@@ -204,12 +243,6 @@ function ChatMessage({
 		| undefined;
 }) {
 	const t = useTranslations();
-	const me = useMe();
-	const [myPresence, othersPresence, updatePresence] = usePresence(
-		message.roomId,
-		me?._id as Id<"users">,
-		{},
-	);
 	const authorDetails = members?.[message.authorId];
 
 	return (
@@ -222,16 +255,22 @@ function ChatMessage({
 				<div className="flex flex-col gap-2">
 					{!message.isUserMessage ||
 					message.displayText !== message.originalText ? (
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<MessageContent>{message.displayText}</MessageContent>
-							</TooltipTrigger>
-							<TooltipContent>
-								<p className="text-sm">
-									{t.common.original}: {message.originalText}
-								</p>
-							</TooltipContent>
-						</Tooltip>
+						<>
+							<MessageContent>{message.displayText}</MessageContent>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<button
+										type="button"
+										className="text-xs text-muted-foreground/70 hover:text-muted-foreground text-left w-fit"
+									>
+										{t.common.original}
+									</button>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p className="text-sm">{message.originalText}</p>
+								</TooltipContent>
+							</Tooltip>
+						</>
 					) : (
 						<MessageContent>{message.displayText}</MessageContent>
 					)}
@@ -265,26 +304,33 @@ function ChatMessage({
 	);
 }
 
-function ChatInput() {
+function ChatInput({
+	onTypingChange,
+}: {
+	onTypingChange: (typing: boolean) => void;
+}) {
 	const t = useTranslations();
 	const { roomId } = Route.useParams();
+	const [message, setMessage] = useState("");
 	const { mutate, isPending, error } = useSendMessage();
 	const [lang] = useLocalStorage<{ language: Language }>(
 		"lang",
 		{ language: "en" },
 		{ initializeWithValue: true },
 	);
+
+	useTypingIndicator(message, onTypingChange);
+
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		const formData = new FormData(e.currentTarget);
-		const message = formData.get("message") as string;
 		if (!message.trim()) return;
 		mutate({
 			roomId: roomId as Id<"rooms">,
 			sourceLanguage: lang.language,
 			message: message.trim(),
 		});
-		e.currentTarget.reset();
+		setMessage("");
+		onTypingChange(false);
 	};
 	if (error) {
 		toast.error(error.message);
@@ -335,6 +381,8 @@ function ChatInput() {
 					autoFocus
 					required
 					name="message"
+					value={message}
+					onChange={(e) => setMessage(e.target.value)}
 				/>
 			</InputGroup>
 		</form>

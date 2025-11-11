@@ -84,3 +84,15 @@ export const getRoomMembers = protectedQuery({
 		);
 	},
 });
+
+export const getRoom = protectedQuery({
+	args: { roomId: v.id("rooms") },
+	handler: async (ctx, args) => {
+		const room = await ctx.db.get(args.roomId);
+		if (!room) {
+			throw new Error("Room not found");
+		}
+		const { _creationTime, ...data } = room;
+		return data;
+	},
+});
