@@ -32,3 +32,15 @@ export const getInitials = (
 export function uid(): string {
 	return (Date.now() + Math.floor(Math.random() * 1000)).toString();
 }
+
+export function formatDateTime(input: Date | string | number): string {
+	const date = new Date(input);
+	return date.toLocaleString("en-NG", {
+		month: "long",
+		day: "numeric",
+		year: "numeric",
+		hour: "numeric",
+		minute: "numeric",
+		hour12: true,
+	});
+}

@@ -1,7 +1,7 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { protectedQuery } from "./functions";
+import { protectedMutation, protectedQuery } from "./functions";
 
 export const getMe = protectedQuery({
 	args: {},
@@ -91,5 +91,37 @@ export const getPublicUsers = protectedQuery({
 			...results,
 			page: data,
 		};
+	},
+});
+
+export const getUploadUrl = protectedMutation({
+	args: {},
+	handler: async (ctx) => {
+		return await ctx.storage.generateUploadUrl();
+	},
+});
+
+export const updateUser = protectedMutation({
+	args: {
+		body: v.object({
+			accountType: v.optional(
+				v.union(v.literal("public"), v.literal("private")),
+			),
+			name: v.optional(v.string()),
+			avatar: v.optional(v.id("_storage")),
+		}),
+	},
+	handler: async (ctx, args) => {
+		if (args.body.avatar) {
+			const url = await ctx.storage.getUrl(args.body.avatar);
+			if (!url) throw new Error("Invalid avatar ID");
+			await ctx.db.patch(ctx.user._id, {
+				avatar: url,
+			});
+		}
+		return await ctx.db.patch(ctx.user._id, {
+			accountType: args.body.accountType,
+			name: args.body.name,
+		});
 	},
 });

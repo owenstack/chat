@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as autumn from "../autumn.js";
 import type * as chat from "../chat.js";
 import type * as functions from "../functions.js";
 import type * as presence from "../presence.js";
@@ -30,6 +31,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  autumn: typeof autumn;
   chat: typeof chat;
   functions: typeof functions;
   presence: typeof presence;
@@ -158,4 +160,5 @@ export declare const components: {
       >;
     };
   };
+  autumn: {};
 };

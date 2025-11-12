@@ -6,6 +6,7 @@ import { z } from "zod";
 import { api, components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { action, internalMutation, internalQuery } from "./_generated/server";
+import { autumn } from "./autumn";
 import { protectedMutation, protectedQuery } from "./functions";
 import { system } from "./prompts";
 
@@ -27,6 +28,23 @@ export const sendMessage = protectedMutation({
 		roomId: v.id("rooms"),
 	},
 	handler: async (ctx, args) => {
+		const { data, error } = await autumn.check(ctx, {
+			featureId: "messages",
+		});
+		if (error) {
+			throw new Error(error.message);
+		}
+		if (!data?.allowed) {
+			throw new Error(
+				"You have reached your translation limit. Please upgrade your plan.",
+			);
+		}
+
+		// Track translation usage
+		await autumn.track(ctx, {
+			featureId: "translations",
+			value: 1,
+		});
 		const previousMessagesRaw = await ctx.db
 			.query("messages")
 			.withIndex("by_room", (q) => q.eq("roomId", args.roomId))

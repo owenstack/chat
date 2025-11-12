@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/tanstackstart-react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useCustomer } from "autumn-js/react";
 import {
 	ArrowUp,
 	Check,
@@ -17,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { useLocalStorage } from "usehooks-ts";
+import PaywallDialog from "@/components/autumn/paywall-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConversationEmptyState } from "@/components/ui/conversation";
@@ -117,6 +119,12 @@ function RouteComponent() {
 				.map((p) => members?.[p.userId as Id<"users">]?.name || "Someone"),
 		[others, members],
 	);
+
+	// this implementation is sub-optimal at best
+	// useEffect hell looks like a ticking time bomb
+	// I should mostly allow the virtualizer handle the scroll
+	// that didn't work and even this hack isn't working as best as it should
+	// will have to review this and come back to it
 
 	const virtualItems = virtualizer.getVirtualItems();
 
@@ -318,12 +326,18 @@ function ChatInput({
 		{ language: "en" },
 		{ initializeWithValue: true },
 	);
+	const { check } = useCustomer();
 
 	useTypingIndicator(message, onTypingChange);
 
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!message.trim()) return;
+		await check({
+			featureId: "messages",
+			dialog: PaywallDialog,
+		});
+
 		mutate({
 			roomId: roomId as Id<"rooms">,
 			sourceLanguage: lang.language,

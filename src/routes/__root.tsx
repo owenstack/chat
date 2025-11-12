@@ -11,6 +11,7 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { AutumnProvider } from "autumn-js/react";
 import type { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithAuth0 } from "convex/react-auth0";
 import { useEffect } from "react";
@@ -21,6 +22,7 @@ import { ThemeProvider } from "@/components/theme";
 import { env } from "@/env";
 import { seo } from "@/lib/seo";
 import { getThemeServerFn } from "@/lib/theme";
+import { api } from "../../convex/_generated/api";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRouteWithContext<{
@@ -69,6 +71,7 @@ export const Route = createRootRouteWithContext<{
 function RootComponent() {
 	const context = Route.useRouteContext();
 	const theme = Route.useLoaderData();
+
 	return (
 		<Auth0Provider
 			domain={env.VITE_AUTH0_DOMAIN}
@@ -81,12 +84,14 @@ function RootComponent() {
 			cacheLocation="localstorage"
 		>
 			<ConvexProviderWithAuth0 client={context.convexClient}>
-				<ThemeProvider theme={theme}>
-					<RootDocument>
-						<Outlet />
-						<Toaster richColors />
-					</RootDocument>
-				</ThemeProvider>
+				<AutumnProvider convex={context.convexClient} convexApi={api.autumn}>
+					<ThemeProvider theme={theme}>
+						<RootDocument>
+							<Outlet />
+							<Toaster richColors />
+						</RootDocument>
+					</ThemeProvider>
+				</AutumnProvider>
 			</ConvexProviderWithAuth0>
 		</Auth0Provider>
 	);
