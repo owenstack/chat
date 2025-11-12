@@ -38,7 +38,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type Language, languages } from "@/lib/content";
+import { type Language, languages, useTranslations } from "@/lib/content";
 import { formatDateTime } from "@/lib/helpers";
 import { useMe } from "@/lib/hooks";
 import { api } from "../../../convex/_generated/api";
@@ -66,13 +66,17 @@ export const Route = createFileRoute("/app/settings")({
 });
 
 function RouteComponent() {
+	const t = useTranslations();
+
 	return (
 		<div className="flex flex-col h-full max-w-5xl mx-auto w-full">
 			<div className="border-b px-6 py-8">
 				<div className="max-w-3xl">
-					<h1 className="text-4xl font-bold tracking-tight">Settings</h1>
+					<h1 className="text-4xl font-bold tracking-tight">
+						{t.settings.title}
+					</h1>
 					<p className="text-muted-foreground mt-3 text-lg">
-						Manage your account, billing, and preferences
+						{t.settings.subtitle}
 					</p>
 				</div>
 			</div>
@@ -85,14 +89,14 @@ function RouteComponent() {
 							className="flex items-center gap-2 text-sm font-medium"
 						>
 							<Settings className="size-4" />
-							Account
+							{t.settings.accountTab}
 						</TabsTrigger>
 						<TabsTrigger
 							value="billing"
 							className="flex items-center gap-2 text-sm font-medium"
 						>
 							<CreditCard className="size-4" />
-							Billing
+							{t.settings.billingTab}
 						</TabsTrigger>
 					</TabsList>
 					<TabsContent value="account" className="space-y-6 mt-8">
@@ -108,6 +112,7 @@ function RouteComponent() {
 }
 
 function AccountTab() {
+	const t = useTranslations();
 	const me = useMe();
 	const [newImage, setNewImage] = useState<File>();
 	const [isUploading, setIsUploading] = useState(false);
@@ -115,7 +120,7 @@ function AccountTab() {
 	const updateUser = useMutation(api.user.updateUser);
 	const handleUpload = async () => {
 		if (!newImage) {
-			toast.error("No image selected");
+			toast.error(t.settings.noImageSelected);
 			return;
 		}
 		toast.promise(async () => {
@@ -130,7 +135,7 @@ function AccountTab() {
 					body: newImage,
 				});
 				if (!res.ok) {
-					toast.error("Avatar upload failed");
+					toast.error(t.settings.avatarUploadFailed);
 					Sentry.captureException({ uploadFailed: res.json() });
 					return;
 				}
@@ -141,7 +146,7 @@ function AccountTab() {
 					body: { avatar: storageId },
 				});
 			} catch (error) {
-				toast.error("Failed to upload vatar");
+				toast.error(t.settings.avatarUploadError);
 				Sentry.captureException(error);
 			} finally {
 				setNewImage(undefined);
@@ -174,9 +179,9 @@ function AccountTab() {
 		},
 		onSubmit: async ({ value }) => {
 			toast.promise(updateUser({ body: value }), {
-				loading: "Updating profile...",
-				success: "Profile updated!",
-				error: "Failed to update profile",
+				loading: t.settings.updatingProfile,
+				success: t.settings.profileUpdated,
+				error: t.settings.updateFailed,
 			});
 		},
 	});
@@ -185,10 +190,8 @@ function AccountTab() {
 		<div className="space-y-8">
 			<Card>
 				<CardHeader>
-					<CardTitle>Profile Picture</CardTitle>
-					<CardDescription>
-						Upload a photo to personalize your account
-					</CardDescription>
+					<CardTitle>{t.settings.profilePicture}</CardTitle>
+					<CardDescription>{t.settings.uploadPhoto}</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<div className="flex flex-col sm:flex-row items-center gap-6">
@@ -207,7 +210,7 @@ function AccountTab() {
 								size="lg"
 							>
 								{isUploading ? <Spinner className="size-4 mr-2" /> : null}
-								Upload Photo
+								{t.settings.uploadButton}
 							</Button>
 						)}
 					</div>
@@ -216,10 +219,8 @@ function AccountTab() {
 
 			<Card>
 				<CardHeader>
-					<CardTitle>Language Preference</CardTitle>
-					<CardDescription>
-						Choose your preferred language for the interface
-					</CardDescription>
+					<CardTitle>{t.settings.languagePreference}</CardTitle>
+					<CardDescription>{t.settings.languageDescription}</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<RadioGroup
@@ -246,10 +247,8 @@ function AccountTab() {
 
 			<Card>
 				<CardHeader>
-					<CardTitle>Account Settings</CardTitle>
-					<CardDescription>
-						Manage your personal information and privacy
-					</CardDescription>
+					<CardTitle>{t.settings.accountSettings}</CardTitle>
+					<CardDescription>{t.settings.accountSettingsDesc}</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<form
@@ -269,7 +268,7 @@ function AccountTab() {
 											htmlFor={field.name}
 											className="text-base font-semibold"
 										>
-											Display Name
+											{t.settings.displayName}
 										</FieldLabel>
 										<Input
 											aria-invalid={isInvalid}
@@ -299,10 +298,10 @@ function AccountTab() {
 								return (
 									<FieldSet className="space-y-4">
 										<FieldLegend className="text-base font-semibold">
-											Account Visibility
+											{t.settings.privacy}
 										</FieldLegend>
 										<FieldDescription className="text-sm">
-											Control who can add you to conversations
+											{t.settings.privacyDescription}
 										</FieldDescription>
 										<RadioGroup
 											name={field.name}
@@ -319,10 +318,10 @@ function AccountTab() {
 												>
 													<FieldContent className="flex-1">
 														<FieldTitle className="text-base font-medium">
-															Public
+															{t.settings.publicAccount}
 														</FieldTitle>
 														<FieldDescription className="text-sm mt-1">
-															Anyone can add you to new conversations
+															{t.settings.publicDescription}
 														</FieldDescription>
 													</FieldContent>
 													<RadioGroupItem
@@ -339,11 +338,10 @@ function AccountTab() {
 												>
 													<FieldContent className="flex-1">
 														<FieldTitle className="text-base font-medium">
-															Private
+															{t.settings.privateAccount}
 														</FieldTitle>
 														<FieldDescription className="text-sm mt-1">
-															You won't appear in search or be added to new
-															chats
+															{t.settings.privateDescription}
 														</FieldDescription>
 													</FieldContent>
 													<RadioGroupItem
@@ -369,7 +367,7 @@ function AccountTab() {
 								{form.state.isSubmitting ? (
 									<Spinner className="size-4 mr-2" />
 								) : null}
-								Save Changes
+								{t.settings.saveChanges}
 							</Button>
 						</div>
 					</form>
@@ -403,52 +401,63 @@ function BillingTab() {
 }
 
 function PlanDetails({ product }: { product: CustomerProduct }) {
+	const t = useTranslations();
 	const { checkout } = useCustomer();
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Plan Details</CardTitle>
-				<CardDescription>
-					Information about your current subscription plan.
-				</CardDescription>
+				<CardTitle className="text-2xl">{t.settings.planDetails}</CardTitle>
+				<CardDescription>{t.settings.planDetailsDesc}</CardDescription>
 			</CardHeader>
-			<CardContent>
+			<CardContent className="space-y-6">
 				<div className="flex items-start justify-between">
-					<div className="flex items-center gap-2">
-						<h3 className="font-semibold text-lg">{product.name}</h3>
-						{product.name === "Free" && (
-							<Button
-								variant={"secondary"}
-								onClick={async () => {
-									await checkout({
-										productId: "pro",
-										dialog: CheckoutDialog,
-									});
-								}}
+					<div className="space-y-1">
+						<div className="flex items-center gap-3">
+							<h3 className="font-semibold text-2xl tracking-tight">
+								{product.name}
+							</h3>
+							<Badge
+								variant={
+									product.status === "active" ? "default" : "destructive"
+								}
+								className="capitalize"
 							>
-								Upgrade
-							</Button>
+								{product.status}
+							</Badge>
+						</div>
+						{product.current_period_end && (
+							<p className="text-sm text-muted-foreground">
+								{t.settings.renewsOn}{" "}
+								<span className="font-medium text-foreground">
+									{new Date(
+										product.current_period_end * 1000,
+									).toLocaleDateString()}
+								</span>
+							</p>
+						)}
+						{product.trial_ends_at && (
+							<p className="text-sm text-muted-foreground">
+								{t.settings.trialEndsOn}{" "}
+								<span className="font-medium text-foreground">
+									{new Date(product.trial_ends_at * 1000).toLocaleDateString()}
+								</span>
+							</p>
 						)}
 					</div>
-					<Badge
-						variant={product.status === "active" ? "default" : "destructive"}
-						className="capitalize"
-					>
-						{product.status}
-					</Badge>
+					{product.name === "Free" && (
+						<Button
+							size="lg"
+							onClick={async () => {
+								await checkout({
+									productId: "pro",
+									dialog: CheckoutDialog,
+								});
+							}}
+						>
+							{t.settings.upgradePlan}
+						</Button>
+					)}
 				</div>
-				{product.current_period_end && (
-					<p className="text-sm text-muted-foreground mt-4">
-						Renews on{" "}
-						{new Date(product.current_period_end * 1000).toLocaleDateString()}
-					</p>
-				)}
-				{product.trial_ends_at && (
-					<p className="text-sm text-muted-foreground mt-4">
-						Trial ends on{" "}
-						{new Date(product.trial_ends_at * 1000).toLocaleDateString()}
-					</p>
-				)}
 			</CardContent>
 		</Card>
 	);
@@ -459,6 +468,8 @@ function FeatureUsage({
 }: {
 	features: Record<string, CustomerFeature>;
 }) {
+	const t = useTranslations();
+
 	if (Object.keys(features).length === 0) {
 		return null;
 	}
@@ -466,23 +477,26 @@ function FeatureUsage({
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Feature Usage</CardTitle>
-				<CardDescription>
-					Your usage for the current billing period.
-				</CardDescription>
+				<CardTitle className="text-2xl">{t.settings.featureUsage}</CardTitle>
+				<CardDescription>{t.settings.featureUsageDesc}</CardDescription>
 			</CardHeader>
-			<CardContent className="space-y-4">
+			<CardContent className="space-y-6">
 				{Object.entries(features).map(([key, feature]) => (
-					<div key={key}>
-						<div className="flex justify-between items-center mb-1">
-							<span className="text-sm font-medium">
-								{feature.balance} messages left till{" "}
-								{formatDateTime(feature.next_reset_at ?? new Date())}
+					<div key={key} className="space-y-3">
+						<div className="flex justify-between items-baseline">
+							<span className="text-sm font-semibold tracking-tight">
+								{t.settings.messagesFeature}
+							</span>
+							<span className="text-sm text-muted-foreground">
+								<span className="font-medium text-foreground">
+									{feature.balance?.toLocaleString()}
+								</span>{" "}
+								{t.settings.remaining}
 							</span>
 						</div>
-						<div className="w-full bg-muted rounded-full h-2.5">
+						<div className="w-full bg-muted rounded-full h-3 overflow-hidden">
 							<div
-								className="bg-primary h-2.5 rounded-full"
+								className="bg-primary h-3 rounded-full transition-all duration-300"
 								style={{
 									width: `${
 										feature?.usage_limit != null &&
@@ -494,6 +508,12 @@ function FeatureUsage({
 								}}
 							/>
 						</div>
+						<p className="text-xs text-muted-foreground">
+							{t.settings.resetsOn}{" "}
+							<span className="font-medium text-foreground">
+								{formatDateTime(feature.next_reset_at ?? new Date())}
+							</span>
+						</p>
 					</div>
 				))}
 			</CardContent>
@@ -502,33 +522,44 @@ function FeatureUsage({
 }
 
 function BillingInfo({ invoices }: { invoices?: CustomerInvoice[] }) {
+	const t = useTranslations();
+
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Billing Information</CardTitle>
-				<CardDescription>
-					Manage your payment method and view your invoices.
-				</CardDescription>
+				<CardTitle className="text-2xl">{t.settings.billingInfo}</CardTitle>
+				<CardDescription>{t.settings.billingInfoDesc}</CardDescription>
 			</CardHeader>
-			<CardContent></CardContent>
-			{invoices && invoices.length > 0 && (
-				<>
-					<CardHeader>
-						<CardTitle>Invoices</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<ul className="divide-y divide-border">
+			<CardContent>
+				{!invoices || invoices.length === 0 ? (
+					<p className="text-sm text-muted-foreground">
+						{t.settings.noInvoices}
+					</p>
+				) : (
+					<div className="space-y-4">
+						<h3 className="text-lg font-semibold">
+							{t.settings.recentInvoices}
+						</h3>
+						<div className="divide-y divide-border rounded-lg border">
 							{invoices.map((invoice) => (
-								<li
+								<div
 									key={invoice.stripe_id}
-									className="flex justify-between items-center py-3"
+									className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
 								>
-									<div>
+									<div className="space-y-1">
 										<p className="font-medium">
-											{new Date(invoice.created_at * 1000).toLocaleDateString()}
+											{new Date(invoice.created_at * 1000).toLocaleDateString(
+												"en-US",
+												{
+													year: "numeric",
+													month: "long",
+													day: "numeric",
+												},
+											)}
 										</p>
 										<p className="text-sm text-muted-foreground">
-											{invoice.total / 100} {invoice.currency.toUpperCase()}
+											${(invoice.total / 100).toFixed(2)}{" "}
+											{invoice.currency.toUpperCase()}
 										</p>
 									</div>
 									<a
@@ -537,14 +568,14 @@ function BillingInfo({ invoices }: { invoices?: CustomerInvoice[] }) {
 										rel="noopener noreferrer"
 										className="text-sm font-medium text-primary hover:underline"
 									>
-										View PDF
+										{t.settings.viewInvoice}
 									</a>
-								</li>
+								</div>
 							))}
-						</ul>
-					</CardContent>
-				</>
-			)}
+						</div>
+					</div>
+				)}
+			</CardContent>
 		</Card>
 	);
 }
