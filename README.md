@@ -5,6 +5,10 @@
 
 **Live Demo:** <https://chat.efobi.dev>
 
+**Article:** [Why another chat app?](https://www.efobi.dev/blog/my-hackathon-submission-and-a-review-of-your-tools)
+
+**Demo Video:** [Coming soon]
+
 A full-stack chat application that enables seamless global communication through instant AI-powered language translation. Built with TanStack Start and leveraging multiple hackathon partner integrations.
 
 ## 🏆 Hackathon Partner Integrations
