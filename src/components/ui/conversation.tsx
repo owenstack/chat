@@ -1,5 +1,6 @@
 "use client";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowDownIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 import { useCallback } from "react";
@@ -67,6 +68,61 @@ export const ConversationEmptyState = ({
 		)}
 	</div>
 );
+
+export type ConversationVirtualizedContentProps<T> = {
+	items: T[];
+	renderItem: (item: T, index: number) => React.ReactNode;
+	estimateSize?: () => number;
+	overscan?: number;
+	className?: string;
+};
+
+export const ConversationVirtualizedContent = <T,>({
+	items,
+	renderItem,
+	estimateSize = () => 100,
+	overscan = 5,
+	className,
+}: ConversationVirtualizedContentProps<T>) => {
+	const { scrollRef } = useStickToBottomContext();
+
+	const virtualizer = useVirtualizer({
+		count: items.length,
+		getScrollElement: () => scrollRef.current,
+		estimateSize,
+		overscan,
+	});
+
+	const virtualItems = virtualizer.getVirtualItems();
+
+	return (
+		<div
+			className={className}
+			style={{
+				height: virtualizer.getTotalSize(),
+				width: "100%",
+				position: "relative",
+			}}
+		>
+			{virtualItems.map((virtualItem) => (
+				<div
+					key={virtualItem.key}
+					data-index={virtualItem.index}
+					ref={virtualizer.measureElement}
+					style={{
+						position: "absolute",
+						top: 0,
+						left: 0,
+						width: "100%",
+						transform: `translateY(${virtualItem.start}px)`,
+					}}
+				>
+					{renderItem(items[virtualItem.index], virtualItem.index)}
+				</div>
+			))}
+		</div>
+	);
+};
 
 export type ConversationScrollButtonProps = ComponentProps<typeof Button>;
 

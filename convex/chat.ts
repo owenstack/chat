@@ -28,21 +28,9 @@ export const sendMessage = protectedMutation({
 		roomId: v.id("rooms"),
 	},
 	handler: async (ctx, args) => {
-		const { data, error } = await autumn.check(ctx, {
-			featureId: "messages",
-		});
-		if (error) {
-			throw new Error(error.message);
-		}
-		if (!data?.allowed) {
-			throw new Error(
-				"You have reached your translation limit. Please upgrade your plan.",
-			);
-		}
-
 		// Track translation usage
 		await autumn.track(ctx, {
-			featureId: "translations",
+			featureId: "messages",
 			value: 1,
 		});
 		const previousMessagesRaw = await ctx.db

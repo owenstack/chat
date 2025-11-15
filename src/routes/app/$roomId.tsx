@@ -2,7 +2,6 @@ import { convexQuery, useConvexPaginatedQuery } from "@convex-dev/react-query";
 import * as Sentry from "@sentry/tanstackstart-react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCustomer } from "autumn-js/react";
 import {
 	ArrowUp,
@@ -21,7 +20,13 @@ import { useLocalStorage } from "usehooks-ts";
 import PaywallDialog from "@/components/autumn/paywall-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ConversationEmptyState } from "@/components/ui/conversation";
+import {
+	Conversation,
+	ConversationContent,
+	ConversationEmptyState,
+	ConversationScrollButton,
+	ConversationVirtualizedContent,
+} from "@/components/ui/conversation";
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -99,15 +104,14 @@ function RouteComponent() {
 	});
 	const messages = useMemo(() => [...results].reverse(), [results]);
 	const count = messages.length;
-	const { isAtBottom, scrollToBottom, scrollRef } = useStickToBottom();
+	const { scrollToBottom } = useStickToBottom();
 	const hasInitialized = useRef(false);
 
-	const virtualizer = useVirtualizer({
-		count,
-		getScrollElement: () => scrollRef.current,
-		estimateSize: () => 100,
-		overscan: 5,
-	});
+	// this implementation is sub-optimal at best
+	// useEffect hell looks like a ticking time bomb
+	// I should mostly allow the virtualizer handle the scroll
+	// that didn't work and even this hack isn't working as best as it should
+	// will have to review this and come back to it
 
 	const typingUsers = useMemo(
 		() =>
@@ -120,23 +124,12 @@ function RouteComponent() {
 		[others, members],
 	);
 
-	// this implementation is sub-optimal at best
-	// useEffect hell looks like a ticking time bomb
-	// I should mostly allow the virtualizer handle the scroll
-	// that didn't work and even this hack isn't working as best as it should
-	// will have to review this and come back to it
-
-	const virtualItems = virtualizer.getVirtualItems();
-
 	// Load more messages when scrolling to top
 	useEffect(() => {
-		const [firstItem] = virtualItems;
-		if (!firstItem) return;
-
-		if (firstItem.index === 0 && status === "CanLoadMore" && !isLoading) {
+		if (count > 0 && status === "CanLoadMore" && !isLoading) {
 			loadMore(10);
 		}
-	}, [virtualItems, status, isLoading, loadMore]);
+	}, [count, status, isLoading, loadMore]);
 
 	// Initial scroll to bottom when messages first load
 	useEffect(() => {
@@ -144,13 +137,6 @@ function RouteComponent() {
 		hasInitialized.current = true;
 		scrollToBottom();
 	}, [count, scrollToBottom]);
-
-	// Scroll to bottom when new messages arrive and user is at bottom
-	useEffect(() => {
-		if (count === 0 || !isAtBottom) return;
-
-		scrollToBottom();
-	}, [count, isAtBottom, scrollToBottom]);
 
 	const presenceWithUserData = useMemo(
 		() =>
@@ -175,7 +161,7 @@ function RouteComponent() {
 					<PresenceAvatars users={presenceWithUserData} maxDisplay={5} />
 				</div>
 			</div>
-			<div ref={scrollRef} className="flex-1 overflow-y-auto pb-24">
+			<Conversation className="mt-14">
 				{isLoading && count === 0 ? (
 					<ConversationEmptyState
 						title={t.common.loading}
@@ -189,40 +175,27 @@ function RouteComponent() {
 						icon={<MessageSquareX className="size-12" />}
 					/>
 				) : (
-					<div
-						style={{
-							height: virtualizer.getTotalSize(),
-							width: "100%",
-							position: "relative",
-						}}
-					>
+					<ConversationContent className="pb-24">
 						{status === "CanLoadMore" && isLoading && (
 							<div className="flex justify-center py-4">
 								<Spinner />
 							</div>
 						)}
-						{virtualizer.getVirtualItems().map((virtualItem) => {
-							const message = messages[virtualItem.index] as ChatMessageType;
-							return (
-								<div
-									key={virtualItem.key}
-									data-index={virtualItem.index}
-									ref={virtualizer.measureElement}
-									style={{
-										position: "absolute",
-										top: 0,
-										left: 0,
-										width: "100%",
-										transform: `translateY(${virtualItem.start}px)`,
-									}}
-								>
-									<ChatMessage message={message} members={members} />
-								</div>
-							);
-						})}
-					</div>
+						<ConversationVirtualizedContent
+							items={messages}
+							renderItem={(message) => (
+								<ChatMessage
+									message={message as ChatMessageType}
+									members={members}
+								/>
+							)}
+							estimateSize={() => 100}
+							overscan={5}
+						/>
+					</ConversationContent>
 				)}
-			</div>
+				<ConversationScrollButton />
+			</Conversation>
 			<div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
 				<TypingIndicator names={typingUsers} />
 				<ChatInput onTypingChange={updatePresence} />
@@ -333,10 +306,12 @@ function ChatInput({
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!message.trim()) return;
-		await check({
+		const { data } = check({
 			featureId: "messages",
 			dialog: PaywallDialog,
 		});
+
+		if (!data.allowed) return;
 
 		mutate({
 			roomId: roomId as Id<"rooms">,
